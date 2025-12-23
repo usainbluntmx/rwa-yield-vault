@@ -217,6 +217,12 @@ function App() {
     }
   }
 
+  const withdrawMax = async () => {
+    if (!balance || balance === "0") return
+    setAmount(balance)
+    await withdraw()
+  }
+
   /* ─────────────────────────────────────────────── */
   /* Lifecycle                                       */
   /* ─────────────────────────────────────────────── */
@@ -270,6 +276,15 @@ function App() {
             style={{ marginLeft: "1rem" }}
           >
             Retirar
+          </button>
+
+          <button
+            type="button"
+            onClick={withdrawMax}
+            disabled={loading || balance === "0"}
+            style={{ marginLeft: "1rem" }}
+          >
+            Retirar Todo
           </button>
 
           {loading && <p>⏳ Transacción en proceso...</p>}
