@@ -7,213 +7,129 @@ import {
 } from "./contracts/config"
 import "./App.css"
 
-/* ─────────────────────────────────────────────── */
-/* Mantle Sepolia Params                           */
-/* ─────────────────────────────────────────────── */
+/* =========================
+   Reown AppKit
+========================= */
+import {
+  createAppKit,
+  useAppKit,
+  useAppKitAccount,
+} from "@reown/appkit/react"
+import { EthersAdapter } from "@reown/appkit-adapter-ethers"
 
-const MANTLE_SEPOLIA_PARAMS = {
-  chainId: "0x138B", // 5003
-  chainName: "Mantle Sepolia Testnet",
-  nativeCurrency: {
-    name: "Mantle",
-    symbol: "MNT",
-    decimals: 18,
-  },
-  rpcUrls: ["https://rpc.sepolia.mantle.xyz"],
-  blockExplorerUrls: ["https://sepolia.mantlescan.xyz"],
-}
+const ethersAdapter = new EthersAdapter()
+
+/* =========================
+   Inicializar AppKit (UNA VEZ)
+========================= */
+createAppKit({
+  adapters: [ethersAdapter],
+  projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
+  networks: [
+    {
+      id: Number(MANTLE_SEPOLIA_CHAIN_ID),
+      name: "Mantle Sepolia",
+      nativeCurrency: {
+        name: "Mantle",
+        symbol: "MNT",
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: {
+          http: ["https://rpc.sepolia.mantle.xyz"],
+        },
+      },
+    },
+  ],
+})
 
 function App() {
-  const [account, setAccount] = useState<string | null>(null)
-  const [balance, setBalance] = useState<string>("0")
-  const [amount, setAmount] = useState<string>("")
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [txStatus, setTxStatus] = useState<string | null>(null)
+  const { open } = useAppKit()
+  const { address, isConnected } = useAppKitAccount()
 
-  /* ─────────────────────────────────────────────── */
-  /* Helpers                                         */
-  /* ─────────────────────────────────────────────── */
+  const [contract, setContract] = useState<ethers.Contract | null>(null)
 
-  const getProvider = () => {
-    if (!window.ethereum) {
-      throw new Error("MetaMask no está instalado")
-    }
-    return new ethers.BrowserProvider(window.ethereum)
-  }
+  const [amount, setAmount] = useState("")
+  const [balance, setBalance] = useState("0")
+  const [loading, setLoading] = useState(false)
+  const [txStatus, setTxStatus] = useState("")
+  const [error, setError] = useState("")
 
-  const switchToMantle = async () => {
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: MANTLE_SEPOLIA_PARAMS.chainId }],
-      })
-    } catch (err: any) {
-      if (err.code === 4902) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [MANTLE_SEPOLIA_PARAMS],
-        })
-      } else {
-        throw err
-      }
-    }
-  }
+  /* =========================
+     Conectar Provider
+  ========================= */
+  useEffect(() => {
+    if (!isConnected || !window.ethereum) return
 
-  /* ─────────────────────────────────────────────── */
-  /* Wallet                                          */
-  /* ─────────────────────────────────────────────── */
-
-  const connectWallet = async () => {
-    try {
-      setError(null)
-      setSuccess(null)
-
-      const provider = getProvider()
-      await switchToMantle()
-
-      const accounts = await provider.send("eth_requestAccounts", [])
-      const network = await provider.getNetwork()
-
-      if (network.chainId !== MANTLE_SEPOLIA_CHAIN_ID) {
-        setError("Conéctate a Mantle Sepolia Testnet")
-        return
-      }
-
-      setAccount(accounts[0])
-      await loadBalance(accounts[0])
-    } catch (err) {
-      console.error(err)
-      setError("Error al conectar la wallet")
-    }
-  }
-
-  const checkIfConnected = async () => {
-    try {
-      if (!window.ethereum) return
-
-      const provider = getProvider()
-      const accounts = await provider.send("eth_accounts", [])
-
-      if (accounts.length > 0) {
-        await switchToMantle()
-
-        const network = await provider.getNetwork()
-        if (network.chainId !== MANTLE_SEPOLIA_CHAIN_ID) return
-
-        setAccount(accounts[0])
-        await loadBalance(accounts[0])
-      }
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
-  /* ─────────────────────────────────────────────── */
-  /* Contract Reads                                  */
-  /* ─────────────────────────────────────────────── */
-
-  const loadBalance = async (user: string) => {
-    try {
-      const provider = getProvider()
-
-      const contract = new ethers.Contract(
-        RWA_VAULT_ADDRESS,
-        vaultArtifact.abi,
-        provider
-      )
-
-      const deposited = await contract.balances(user)
-      setBalance(ethers.formatEther(deposited))
-    } catch (err) {
-      console.error(err)
-      setError("No se pudo cargar el balance")
-    }
-  }
-
-  /* ─────────────────────────────────────────────── */
-  /* Contract Writes                                 */
-  /* ─────────────────────────────────────────────── */
-
-  const deposit = async () => {
-    try {
-      if (!amount || !account) return
-
-      setLoading(true)
-      setError(null)
-      setSuccess(null)
-
-      const provider = getProvider()
+    const setup = async () => {
+      const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
-
       const contract = new ethers.Contract(
         RWA_VAULT_ADDRESS,
         vaultArtifact.abi,
         signer
       )
 
+      setContract(contract)
+    }
+
+    setup()
+  }, [isConnected])
+
+  /* =========================
+     Leer balance
+  ========================= */
+  const loadBalance = async () => {
+    if (!contract || !address) return
+    const raw = await contract.balances(address)
+    setBalance(ethers.formatEther(raw))
+  }
+
+  useEffect(() => {
+    loadBalance()
+  }, [contract])
+
+  /* =========================
+     Depositar
+  ========================= */
+  const deposit = async () => {
+    if (!contract || !amount) return
+    try {
+      setLoading(true)
+      setTxStatus("⏳ Transacción en proceso...")
       const tx = await contract.deposit({
         value: ethers.parseEther(amount),
       })
-
       await tx.wait()
-      await loadBalance(account)
-
-      setSuccess("Depósito realizado exitosamente")
+      await loadBalance()
+      setTxStatus("✅ Depósito realizado")
       setAmount("")
-    } catch (err) {
-      console.error(err)
-      setError("Error al depositar")
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setLoading(false)
     }
   }
 
+  /* =========================
+     Retirar
+  ========================= */
   const withdraw = async () => {
+    if (!contract || !amount) return
     try {
-      if (!account || !amount) return
-
       setLoading(true)
-      setError(null)
-      setSuccess(null)
-
-      const provider = getProvider()
-      const signer = await provider.getSigner()
-
-      const contract = new ethers.Contract(
-        RWA_VAULT_ADDRESS,
-        vaultArtifact.abi,
-        signer
+      setTxStatus("⏳ Transacción en proceso...")
+      const tx = await contract.withdraw(
+        ethers.parseEther(amount)
       )
-
-      const amountWei = ethers.parseEther(amount)
-
-      const deposited = await contract.balances(account)
-
-      if (amountWei <= 0n) {
-        setError("El monto debe ser mayor a 0")
-        return
-      }
-
-      if (amountWei > deposited) {
-        setError("No tienes suficiente balance")
-        return
-      }
-
-      const tx = await contract.withdraw(amountWei)
-      // setTxStatus("⏳ Transacción en proceso...")
       await tx.wait()
-
-      await loadBalance(account)
+      await loadBalance()
+      setTxStatus("✅ Retiro realizado")
       setAmount("")
-      setSuccess("Retiro realizado exitosamente")
-    } catch (err) {
-      console.error(err)
-      setError("Error al retirar")
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setLoading(false)
-      setTxStatus(null)
     }
   }
 
@@ -223,30 +139,23 @@ function App() {
     await withdraw()
   }
 
-  /* ─────────────────────────────────────────────── */
-  /* Lifecycle                                       */
-  /* ─────────────────────────────────────────────── */
-
-  useEffect(() => {
-    checkIfConnected()
-  }, [])
-
-  /* ─────────────────────────────────────────────── */
-  /* UI                                              */
-  /* ─────────────────────────────────────────────── */
-
+  /* =========================
+     UI
+  ========================= */
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className="App">
       <h1>RWA Yield Vault</h1>
 
-      {!account ? (
-        <button onClick={connectWallet}>Conectar Wallet</button>
+      {!isConnected ? (
+        <button onClick={() => open()}>
+          Conectar Wallet
+        </button>
       ) : (
         <>
           <p>
             Wallet conectada:
             <br />
-            <strong>{account}</strong>
+            <strong>{address}</strong>
           </p>
 
           <p>
@@ -270,7 +179,6 @@ function App() {
           </button>
 
           <button
-            type="button"
             onClick={withdraw}
             disabled={loading}
             style={{ marginLeft: "1rem" }}
@@ -287,20 +195,9 @@ function App() {
             Retirar Todo
           </button>
 
-          {loading && <p>⏳ Transacción en proceso...</p>}
-          {success && (
-            <p style={{ color: "green", marginTop: "1rem" }}>
-              ✅ {success}
-            </p>
-          )}
+          {txStatus && <p>{txStatus}</p>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
         </>
-      )}
-
-      {txStatus && <p>{txStatus}</p>}
-      {error && (
-        <p style={{ color: "red", marginTop: "1rem" }}>
-          {error}
-        </p>
       )}
     </div>
   )
