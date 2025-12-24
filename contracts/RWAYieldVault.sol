@@ -8,11 +8,16 @@ contract RWAYieldVault {
     mapping(address => uint256) public balances;
     mapping(address => uint256) public lastUpdate;
 
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
+
     function deposit() external payable {
         require(msg.value > 0, "Deposit must be > 0");
 
         _updateYield(msg.sender);
         balances[msg.sender] += msg.value;
+
+        emit Deposit(msg.sender, msg.value);
     }
 
     function withdraw(uint256 amount) external {
@@ -22,7 +27,9 @@ contract RWAYieldVault {
         balances[msg.sender] -= amount;
 
         (bool success, ) = msg.sender.call{value: amount}("");
-        require(success, "ETH transfer failed");
+        require(success, "MNT transfer failed");
+
+        emit Withdraw(msg.sender, amount);
     }
 
     function claimYield() external {

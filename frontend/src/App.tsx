@@ -6,6 +6,9 @@ import {
   MANTLE_SEPOLIA_CHAIN_ID,
 } from "./contracts/config"
 import "./App.css"
+import Navbar from "./components/Navbar"
+import Vault from "./components/Vault"
+import Profile from "./components/Profile"
 
 /* =========================
    Reown AppKit
@@ -54,6 +57,8 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [txStatus, setTxStatus] = useState("")
   const [error, setError] = useState("")
+
+  const [view, setView] = useState<'vault' | 'profile'>('vault')
 
   /* =========================
      Conectar Provider
@@ -194,6 +199,18 @@ function App() {
           >
             Retirar Todo
           </button>
+
+          <Navbar
+            view={view}
+            onChange={setView}
+            isConnected={isConnected}
+            address={address}
+          />
+
+          <div style={{ paddingTop: '64px' }}>
+            {view === 'vault' && <Vault />}
+            {view === 'profile' && <Profile />}
+          </div>
 
           {txStatus && <p>{txStatus}</p>}
           {error && <p style={{ color: "red" }}>{error}</p>}
