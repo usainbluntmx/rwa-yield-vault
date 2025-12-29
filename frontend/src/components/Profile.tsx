@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { ethers } from "ethers"
-import { useAppKitAccount, useAppKitProvider } from "@reown/appkit/react"
+import { useAppKitAccount } from "@reown/appkit/react"
 import { vaultAbi } from "../abi/vaultAbi.ts"
 
 const VAULT_ADDRESS = "0x58468524C30935d9C483f3c9B37AB33e911D3757"
@@ -14,7 +14,6 @@ type TxItem = {
 
 export default function Profile() {
     const { address, isConnected } = useAppKitAccount()
-    const { walletProvider } = useAppKitProvider("eip155")
 
     const [history, setHistory] = useState<TxItem[]>([])
     const [loading, setLoading] = useState(false)
@@ -37,48 +36,54 @@ export default function Profile() {
                 )
 
                 const DEPLOY_BLOCK = 32507282
+                const CHUNK_SIZE = 2000
 
-                // ⚠️ Ajusta los nombres SOLO si tus eventos se llaman distinto
-                // const currentBlock = await ethersProvider.getBlockNumber()
+                const latestBlock = await rpcProvider.getBlockNumber()
 
-                // buscamos últimos ~50k bloques (suficiente para testnet)
-                // const fromBlock = Math.max(currentBlock - 50_000, 0)
+                const deposits: TxItem[] = []
+                const withdrawals: TxItem[] = []
 
-                const depositEvents = await contract.queryFilter(
-                    contract.filters.Deposit(address),
-                    DEPLOY_BLOCK,
-                    "latest"
-                )
+                for (let from = DEPLOY_BLOCK; from <= latestBlock; from += CHUNK_SIZE) {
+                    const to = Math.min(from + CHUNK_SIZE - 1, latestBlock)
 
-                const withdrawEvents = await contract.queryFilter(
-                    contract.filters.Withdraw(address),
-                    DEPLOY_BLOCK,
-                    "latest"
-                )
+                    const depositEvents = await contract.queryFilter(
+                        contract.filters.Deposit(address),
+                        from,
+                        to
+                    )
 
-                const deposits = await Promise.all(
-                    depositEvents.map(async (e: any) => {
+                    const withdrawEvents = await contract.queryFilter(
+                        contract.filters.Withdraw(address),
+                        from,
+                        to
+                    )
+
+                    for (const e of depositEvents) {
+                        if (!("args" in e)) continue
+
                         const block = await rpcProvider.getBlock(e.blockNumber)
-                        return {
-                            type: "Deposit" as const,
+
+                        deposits.push({
+                            type: "Deposit",
                             amount: ethers.formatEther(e.args.amount),
                             txHash: e.transactionHash,
-                            timestamp: block?.timestamp ?? 0,
-                        }
-                    })
-                )
+                            timestamp: block ? block.timestamp : 0,
+                        })
+                    }
 
-                const withdrawals = await Promise.all(
-                    withdrawEvents.map(async (e: any) => {
+                    for (const e of withdrawEvents) {
+                        if (!("args" in e)) continue
+
                         const block = await rpcProvider.getBlock(e.blockNumber)
-                        return {
-                            type: "Withdraw" as const,
+
+                        withdrawals.push({
+                            type: "Withdraw",
                             amount: ethers.formatEther(e.args.amount),
                             txHash: e.transactionHash,
-                            timestamp: block?.timestamp ?? 0,
-                        }
-                    })
-                )
+                            timestamp: block ? block.timestamp : 0,
+                        })
+                    }
+                }
 
                 setHistory(
                     [...deposits, ...withdrawals].sort(
@@ -132,7 +137,9 @@ export default function Profile() {
                             <tr key={idx}>
                                 <td>{tx.type}</td>
                                 <td>{tx.amount} MNT</td>
-                                <td>{new Date(tx.timestamp * 1000).toLocaleString()}</td>
+                                <td>
+                                    {new Date(tx.timestamp * 1000).toLocaleString()}
+                                </td>
                                 <td>
                                     <a
                                         href={`https://sepolia.mantlescan.xyz/tx/${tx.txHash}`}
