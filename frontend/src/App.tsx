@@ -7,12 +7,9 @@ import {
 } from "./contracts/config"
 import "./App.css"
 import Navbar from "./components/Navbar"
-import Vault from "./components/Vault"
-import Profile from "./components/Profile"
+import Vault from "./pages/Vault"
+import Profile from "./pages/Profile"
 
-/* =========================
-   Reown AppKit
-========================= */
 import {
   createAppKit,
   useAppKit,
@@ -22,9 +19,6 @@ import { EthersAdapter } from "@reown/appkit-adapter-ethers"
 
 const ethersAdapter = new EthersAdapter()
 
-/* =========================
-   Inicializar AppKit (UNA VEZ)
-========================= */
 createAppKit({
   adapters: [ethersAdapter],
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
@@ -51,24 +45,15 @@ function App() {
   const { address, isConnected } = useAppKitAccount()
 
   const [contract, setContract] = useState<ethers.Contract | null>(null)
-
-  const [amount, setAmount] = useState("")
-  const [balance, setBalance] = useState("0")
-  const [loading, setLoading] = useState(false)
-  const [txStatus, setTxStatus] = useState("")
-  const [error, setError] = useState("")
-
   const [view, setView] = useState<'vault' | 'profile'>('vault')
 
-  /* =========================
-     Conectar Provider
-  ========================= */
   useEffect(() => {
     if (!isConnected || !window.ethereum) return
 
     const setup = async () => {
       const provider = new ethers.BrowserProvider(window.ethereum)
       const signer = await provider.getSigner()
+
       const contract = new ethers.Contract(
         RWA_VAULT_ADDRESS,
         vaultArtifact.abi,
@@ -81,141 +66,30 @@ function App() {
     setup()
   }, [isConnected])
 
-  /* =========================
-     Leer balance
-  ========================= */
-  const loadBalance = async () => {
-    if (!contract || !address) return
-    const raw = await contract.balances(address)
-    setBalance(ethers.formatEther(raw))
-  }
-
-  useEffect(() => {
-    loadBalance()
-  }, [contract])
-
-  /* =========================
-     Depositar
-  ========================= */
-  const deposit = async () => {
-    if (!contract || !amount) return
-    try {
-      setLoading(true)
-      setTxStatus("⏳ Transacción en proceso...")
-      const tx = await contract.deposit({
-        value: ethers.parseEther(amount),
-      })
-      await tx.wait()
-      await loadBalance()
-      setTxStatus("✅ Depósito realizado")
-      setAmount("")
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  /* =========================
-     Retirar
-  ========================= */
-  const withdraw = async () => {
-    if (!contract || !amount) return
-    try {
-      setLoading(true)
-      setTxStatus("⏳ Transacción en proceso...")
-      const tx = await contract.withdraw(
-        ethers.parseEther(amount)
-      )
-      await tx.wait()
-      await loadBalance()
-      setTxStatus("✅ Retiro realizado")
-      setAmount("")
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const withdrawMax = async () => {
-    if (!balance || balance === "0") return
-    setAmount(balance)
-    await withdraw()
-  }
-
-  /* =========================
-     UI
-  ========================= */
   return (
     <div className="App">
       <h1>RWA Yield Vault</h1>
 
-      {!isConnected ? (
-        <button onClick={() => open()}>
-          Conectar Wallet
-        </button>
-      ) : (
-        <>
-          <p>
-            Wallet conectada:
-            <br />
-            <strong>{address}</strong>
-          </p>
+      <Navbar
+        view={view}
+        onChange={setView}
+        isConnected={isConnected}
+        address={address}
+      />
 
-          <p>
-            Balance depositado:
-            <br />
-            <strong>{balance} MNT</strong>
-          </p>
-
-          <input
-            type="text"
-            placeholder="Monto en MNT"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-
-          <br />
-          <br />
-
-          <button onClick={deposit} disabled={loading}>
-            Depositar
+      <div style={{ paddingTop: "64px" }}>
+        {!isConnected && (
+          <button onClick={() => open()}>
+            Conectar Wallet
           </button>
+        )}
 
-          <button
-            onClick={withdraw}
-            disabled={loading}
-            style={{ marginLeft: "1rem" }}
-          >
-            Retirar
-          </button>
+        {isConnected && view === "vault" && (
+          <Vault contract={contract} address={address} />
+        )}
 
-          <button
-            type="button"
-            onClick={withdrawMax}
-            disabled={loading || balance === "0"}
-            style={{ marginLeft: "1rem" }}
-          >
-            Retirar Todo
-          </button>
-
-          <Navbar
-            view={view}
-            onChange={setView}
-            isConnected={isConnected}
-            address={address}
-          />
-
-          <div style={{ paddingTop: '64px' }}>
-            {view === 'vault' && <Vault />}
-            {view === 'profile' && <Profile />}
-          </div>
-
-          {txStatus && <p>{txStatus}</p>}
-          {error && <p style={{ color: "red" }}>{error}</p>}
-        </>
-      )}
+        {isConnected && view === "profile" && <Profile />}
+      </div>
     </div>
   )
 }
