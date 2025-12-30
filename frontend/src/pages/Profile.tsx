@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { ethers } from "ethers"
 import { useAppKitAccount } from "@reown/appkit/react"
-import { vaultAbi } from "../abi/vaultAbi.ts"
+import { vaultAbi } from "../abi/vaultAbi"
 
 const VAULT_ADDRESS = "0x58468524C30935d9C483f3c9B37AB33e911D3757"
+const RPC_HTTP = "https://rpc.sepolia.mantle.xyz"
+
+const BLOCK_LOOKBACK = 5000
+const MAX_TX = 9
+const HISTORY_CACHE_PREFIX = "vault-history"
 
 type TxItem = {
     type: "Deposit" | "Withdraw"
@@ -18,77 +23,90 @@ export default function Profile() {
     const [history, setHistory] = useState<TxItem[]>([])
     const [loading, setLoading] = useState(false)
 
+    const didLoad = useRef(false)
+
     useEffect(() => {
         if (!isConnected || !address) return
+        if (didLoad.current) return
+        didLoad.current = true
+
+        const cacheKey = `${HISTORY_CACHE_PREFIX}-${address}`
 
         const loadHistory = async () => {
             try {
                 setLoading(true)
 
-                const rpcProvider = new ethers.JsonRpcProvider(
-                    "https://rpc.sepolia.mantle.xyz"
-                )
+                // 1️⃣ cache inmediato
+                const cached = localStorage.getItem(cacheKey)
+                if (cached) {
+                    const parsed = JSON.parse(cached)
+                    setHistory(parsed.history || [])
+                }
 
+                // 2️⃣ escaneo rápido
+                const provider = new ethers.JsonRpcProvider(RPC_HTTP)
                 const contract = new ethers.Contract(
                     VAULT_ADDRESS,
                     vaultAbi,
-                    rpcProvider
+                    provider
                 )
 
-                const DEPLOY_BLOCK = 32507282
-                const CHUNK_SIZE = 2000
+                const latestBlock = await provider.getBlockNumber()
+                const fromBlock = Math.max(latestBlock - BLOCK_LOOKBACK, 0)
 
-                const latestBlock = await rpcProvider.getBlockNumber()
+                const deposits = await contract.queryFilter(
+                    contract.filters.Deposit(address),
+                    fromBlock,
+                    latestBlock
+                )
 
-                const deposits: TxItem[] = []
-                const withdrawals: TxItem[] = []
+                const withdrawals = await contract.queryFilter(
+                    contract.filters.Withdraw(address),
+                    fromBlock,
+                    latestBlock
+                )
 
-                for (let from = DEPLOY_BLOCK; from <= latestBlock; from += CHUNK_SIZE) {
-                    const to = Math.min(from + CHUNK_SIZE - 1, latestBlock)
+                const txs: TxItem[] = []
 
-                    const depositEvents = await contract.queryFilter(
-                        contract.filters.Deposit(address),
-                        from,
-                        to
-                    )
+                for (const e of deposits) {
+                    const event = e as ethers.EventLog
+                    const block = await provider.getBlock(event.blockNumber)
+                    if (!block) continue
 
-                    const withdrawEvents = await contract.queryFilter(
-                        contract.filters.Withdraw(address),
-                        from,
-                        to
-                    )
-
-                    for (const e of depositEvents) {
-                        if (!("args" in e)) continue
-
-                        const block = await rpcProvider.getBlock(e.blockNumber)
-
-                        deposits.push({
-                            type: "Deposit",
-                            amount: ethers.formatEther(e.args.amount),
-                            txHash: e.transactionHash,
-                            timestamp: block ? block.timestamp : 0,
-                        })
-                    }
-
-                    for (const e of withdrawEvents) {
-                        if (!("args" in e)) continue
-
-                        const block = await rpcProvider.getBlock(e.blockNumber)
-
-                        withdrawals.push({
-                            type: "Withdraw",
-                            amount: ethers.formatEther(e.args.amount),
-                            txHash: e.transactionHash,
-                            timestamp: block ? block.timestamp : 0,
-                        })
-                    }
+                    txs.push({
+                        type: "Deposit",
+                        amount: ethers.formatEther(event.args[1]),
+                        txHash: event.transactionHash,
+                        timestamp: block.timestamp,
+                    })
                 }
 
-                setHistory(
-                    [...deposits, ...withdrawals].sort(
-                        (a, b) => b.timestamp - a.timestamp
-                    )
+                for (const e of withdrawals) {
+                    const event = e as ethers.EventLog
+                    const block = await provider.getBlock(event.blockNumber)
+                    if (!block) continue
+
+                    txs.push({
+                        type: "Withdraw",
+                        amount: ethers.formatEther(event.args[1]),
+                        txHash: event.transactionHash,
+                        timestamp: block.timestamp,
+                    })
+                }
+
+                const latestTxs = txs
+                    .sort((a, b) => b.timestamp - a.timestamp)
+                    .slice(0, MAX_TX)
+
+                setHistory(latestTxs)
+
+                // 3️⃣ actualizar cache
+                localStorage.setItem(
+                    cacheKey,
+                    JSON.stringify({
+                        history: latestTxs,
+                        updatedAt: Date.now(),
+                    })
                 )
             } catch (err) {
                 console.error("Error cargando historial:", err)
@@ -114,12 +132,12 @@ export default function Profile() {
                 {address}
             </p>
 
-            <h3 style={{ marginTop: "2rem" }}>Historial</h3>
+            <h3 style={{ marginTop: "2rem" }}>Últimas transacciones</h3>
 
             {loading && <p>Cargando historial...</p>}
 
             {!loading && history.length === 0 && (
-                <p>No hay transacciones registradas.</p>
+                <p>No hay transacciones recientes.</p>
             )}
 
             {!loading && history.length > 0 && (
@@ -133,13 +151,11 @@ export default function Profile() {
                         </tr>
                     </thead>
                     <tbody>
-                        {history.map((tx, idx) => (
-                            <tr key={idx}>
+                        {history.map(tx => (
+                            <tr key={tx.txHash}>
                                 <td>{tx.type}</td>
                                 <td>{tx.amount} MNT</td>
-                                <td>
-                                    {new Date(tx.timestamp * 1000).toLocaleString()}
-                                </td>
+                                <td>{new Date(tx.timestamp * 1000).toLocaleString()}</td>
                                 <td>
                                     <a
                                         href={`https://sepolia.mantlescan.xyz/tx/${tx.txHash}`}
