@@ -1,6 +1,6 @@
 import React from 'react'
 
-type View = 'vault' | 'profile'
+type View = 'vault' | 'profile' | 'faucet'
 
 interface NavbarProps {
     view: View
@@ -41,7 +41,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     style={{
                         fontWeight: view === 'vault' ? 'bold' : 'normal',
                         textDecoration: view === 'vault' ? 'underline' : 'none',
-                        marginLeft: "1rem"
+                        marginLeft: '1rem',
                     }}
                 >
                     Vault
@@ -51,10 +51,20 @@ const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => onChange('profile')}
                     style={{
                         fontWeight: view === 'profile' ? 'bold' : 'normal',
-                        textDecoration: view === 'profile' ? 'underline' : 'none'
+                        textDecoration: view === 'profile' ? 'underline' : 'none',
                     }}
                 >
                     Perfil
+                </button>
+
+                <button
+                    onClick={() => onChange('faucet')}
+                    style={{
+                        fontWeight: view === 'faucet' ? 'bold' : 'normal',
+                        textDecoration: view === 'faucet' ? 'underline' : 'none',
+                    }}
+                >
+                    Faucet
                 </button>
             </div>
 

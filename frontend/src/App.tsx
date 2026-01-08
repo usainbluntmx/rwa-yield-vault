@@ -9,6 +9,7 @@ import "./App.css"
 import Navbar from "./components/Navbar"
 import Vault from "./pages/Vault"
 import Profile from "./pages/Profile"
+import Faucet from "./pages/Faucet"
 
 import {
   createAppKit,
@@ -45,7 +46,7 @@ function App() {
   const { address, isConnected } = useAppKitAccount()
 
   const [contract, setContract] = useState<ethers.Contract | null>(null)
-  const [view, setView] = useState<'vault' | 'profile'>('vault')
+  const [view, setView] = useState<'vault' | 'profile' | 'faucet'>('vault')
 
   useEffect(() => {
     if (!isConnected || !window.ethereum) return
@@ -89,6 +90,7 @@ function App() {
         )}
 
         {isConnected && view === "profile" && <Profile />}
+        {isConnected && view === "faucet" && <Faucet />}
       </div>
     </div>
   )
