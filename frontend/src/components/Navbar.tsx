@@ -66,6 +66,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 >
                     Faucet
                 </button>
+
             </div>
 
             {/* Wallet */}

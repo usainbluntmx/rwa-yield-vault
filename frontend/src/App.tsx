@@ -1,15 +1,10 @@
-import { useEffect, useState } from "react"
-import { ethers } from "ethers"
-import vaultArtifact from "./contracts/RWAYieldVault.json"
-import {
-  RWA_VAULT_ADDRESS,
-  MANTLE_SEPOLIA_CHAIN_ID,
-} from "./contracts/config"
+import { useState } from "react"
 import "./App.css"
 import Navbar from "./components/Navbar"
 import Vault from "./pages/Vault"
 import Profile from "./pages/Profile"
 import Faucet from "./pages/Faucet"
+import { VAULTS } from "./constants/vaults"
 
 import {
   createAppKit,
@@ -17,6 +12,7 @@ import {
   useAppKitAccount,
 } from "@reown/appkit/react"
 import { EthersAdapter } from "@reown/appkit-adapter-ethers"
+import { MANTLE_SEPOLIA_CHAIN_ID } from "./contracts/config"
 
 const ethersAdapter = new EthersAdapter()
 
@@ -45,27 +41,7 @@ function App() {
   const { open } = useAppKit()
   const { address, isConnected } = useAppKitAccount()
 
-  const [contract, setContract] = useState<ethers.Contract | null>(null)
-  const [view, setView] = useState<'vault' | 'profile' | 'faucet'>('vault')
-
-  useEffect(() => {
-    if (!isConnected || !window.ethereum) return
-
-    const setup = async () => {
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-
-      const contract = new ethers.Contract(
-        RWA_VAULT_ADDRESS,
-        vaultArtifact.abi,
-        signer
-      )
-
-      setContract(contract)
-    }
-
-    setup()
-  }, [isConnected])
+  const [view, setView] = useState<"vault" | "profile" | "faucet">("vault")
 
   return (
     <div className="App">
@@ -86,7 +62,10 @@ function App() {
         )}
 
         {isConnected && view === "vault" && (
-          <Vault contract={contract} address={address} />
+          <Vault
+            address={address}
+            vaults={VAULTS}
+          />
         )}
 
         {isConnected && view === "profile" && <Profile />}

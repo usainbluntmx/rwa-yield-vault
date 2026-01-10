@@ -1,118 +1,267 @@
-import { useEffect, useState } from "react"
-import type { FC } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ethers } from "ethers"
+import { mockErc20Abi } from "../abi/mockErc20Abi"
+import { vaultAbi, erc20VaultAbi } from "../abi/vaultAbi"
 
-export interface VaultProps {
-    contract: ethers.Contract | null
-    address?: string
+export interface VaultConfig {
+    symbol: string
+    decimals: number
+    isNative: boolean
+    tokenAddress?: string
+    vaultAddress: string
 }
 
-const Vault: FC<VaultProps> = ({ contract, address }) => {
-    const [amount, setAmount] = useState("")
-    const [balance, setBalance] = useState("0")
-    const [loading, setLoading] = useState(false)
-    const [txStatus, setTxStatus] = useState("")
-    const [error, setError] = useState("")
+interface VaultProps {
+    address?: string
+    vaults: VaultConfig[]
+}
 
-    const loadBalance = async () => {
-        if (!contract || !address) return
-        const raw = await contract.balances(address)
-        setBalance(ethers.formatEther(raw))
+/* ----------------------------
+   HELPERS
+---------------------------- */
+const asAddress = (addr?: string) => {
+    if (!addr || !ethers.isAddress(addr)) {
+        throw new Error(`Invalid address: ${addr}`)
+    }
+    return addr
+}
+
+export default function Vault({ address, vaults }: VaultProps) {
+    const [amount, setAmount] = useState("")
+    const [balances, setBalances] = useState<Record<string, string>>({})
+    const [loadingVault, setLoadingVault] = useState<string | null>(null)
+    const [status, setStatus] = useState("")
+
+    /* ----------------------------
+       PROVIDER
+    ---------------------------- */
+    const provider = useMemo(() => {
+        if (!(window as any).ethereum) return null
+        return new ethers.BrowserProvider((window as any).ethereum)
+    }, [])
+
+    /* ----------------------------
+       LOAD BALANCES (ERC-4626 FIX)
+    ---------------------------- */
+    const loadBalances = async () => {
+        if (!address || !provider) return
+
+        const next: Record<string, string> = {}
+
+        for (const vault of vaults) {
+            try {
+                const contract = new ethers.Contract(
+                    vault.vaultAddress,
+                    vault.isNative ? vaultAbi : erc20VaultAbi,
+                    provider
+                )
+
+                if (vault.isNative) {
+                    const raw: bigint = await contract.balances(address)
+                    next[vault.symbol] = ethers.formatEther(raw)
+                } else {
+                    // ✅ shares → assets
+                    const shares: bigint = await contract.balanceOf(address)
+                    const assets: bigint =
+                        shares === 0n
+                            ? 0n
+                            : await contract.convertToAssets(shares)
+
+                    next[vault.symbol] = ethers.formatUnits(
+                        assets,
+                        vault.decimals
+                    )
+                }
+            } catch (err) {
+                console.error(`Error loading balance for ${vault.symbol}`, err)
+                next[vault.symbol] = "0"
+            }
+        }
+
+        setBalances(next)
     }
 
     useEffect(() => {
-        loadBalance()
-    }, [contract, address])
+        loadBalances()
+        const interval = setInterval(loadBalances, 15_000)
+        return () => clearInterval(interval)
+    }, [address, provider])
 
-    const deposit = async () => {
-        if (!contract || !amount) return
+    /* ----------------------------
+       DEPOSIT (YA CORRECTO)
+    ---------------------------- */
+    const deposit = async (vault: VaultConfig) => {
+        if (!amount || !address || !provider) return
+
         try {
-            setLoading(true)
-            setTxStatus("⏳ Transacción en proceso...")
+            setLoadingVault(vault.symbol)
+            setStatus("⏳ Procesando depósito...")
 
-            const tx = await contract.deposit({
-                value: ethers.parseEther(amount),
-            })
-
-            await tx.wait()
-            await loadBalance()
-
-            setTxStatus("✅ Depósito realizado")
-            setAmount("")
-        } catch (err: any) {
-            setError(err.message)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const withdraw = async () => {
-        if (!contract || !amount) return
-        try {
-            setLoading(true)
-            setTxStatus("⏳ Transacción en proceso...")
-
-            const tx = await contract.withdraw(
-                ethers.parseEther(amount)
+            const signer = await provider.getSigner()
+            const vaultContract = new ethers.Contract(
+                vault.vaultAddress,
+                vault.isNative ? vaultAbi : erc20VaultAbi,
+                signer
             )
 
-            await tx.wait()
-            await loadBalance()
+            if (vault.isNative) {
+                const tx = await vaultContract.deposit({
+                    value: ethers.parseEther(amount),
+                })
+                await tx.wait()
+            } else {
+                const token = new ethers.Contract(
+                    vault.tokenAddress!,
+                    mockErc20Abi,
+                    signer
+                )
 
-            setTxStatus("✅ Retiro realizado")
+                const parsed = ethers.parseUnits(amount, vault.decimals)
+
+                const allowance: bigint = await token.allowance(
+                    address,
+                    vault.vaultAddress
+                )
+
+                if (allowance < parsed) {
+                    const approveTx = await token.approve(
+                        vault.vaultAddress,
+                        parsed
+                    )
+                    await approveTx.wait()
+                }
+
+                const tx = await vaultContract.deposit(parsed, address)
+                await tx.wait()
+            }
+
             setAmount("")
+            await loadBalances()
+            setStatus("✅ Depósito exitoso")
         } catch (err: any) {
-            setError(err.message)
+            console.error(err)
+            setStatus(`❌ ${err.message ?? "Error en depósito"}`)
         } finally {
-            setLoading(false)
+            setLoadingVault(null)
         }
     }
 
-    const withdrawMax = async () => {
-        if (!balance || balance === "0") return
-        setAmount(balance)
-        await withdraw()
+    /* ----------------------------
+       WITHDRAW (ERC-4626 FIX)
+    ---------------------------- */
+    const withdraw = async (vault: VaultConfig, all = false) => {
+        if (!provider || !address) return
+
+        if (!all && !amount) {
+            setStatus("❌ Ingresa un monto")
+            return
+        }
+
+        try {
+            setLoadingVault(vault.symbol)
+            setStatus("⏳ Procesando retiro...")
+
+            const signer = await provider.getSigner()
+            const vaultContract = new ethers.Contract(
+                vault.vaultAddress,
+                vault.isNative ? vaultAbi : erc20VaultAbi,
+                signer
+            )
+
+            if (vault.isNative) {
+                const value = all ? balances[vault.symbol] : amount
+                const tx = await vaultContract.withdraw(
+                    ethers.parseEther(value)
+                )
+                await tx.wait()
+            } else {
+                const shares: bigint = all
+                    ? await vaultContract.balanceOf(address)
+                    : await vaultContract.convertToShares(
+                        ethers.parseUnits(amount, vault.decimals)
+                    )
+
+                if (shares === 0n) {
+                    setStatus("❌ Monto inválido")
+                    return
+                }
+
+                const tx = await vaultContract.redeem(
+                    shares,
+                    address,
+                    address
+                )
+                await tx.wait()
+            }
+
+            setAmount("")
+            await loadBalances()
+            setStatus("✅ Retiro exitoso")
+        } catch (err: any) {
+            console.error(err)
+            setStatus(`❌ ${err.message ?? "Error en retiro"}`)
+        } finally {
+            setLoadingVault(null)
+        }
     }
 
+    /* ----------------------------
+       UI
+    ---------------------------- */
     return (
         <div>
-            <h2>Vault</h2>
-
-            <p>
-                Balance depositado:
-                <br />
-                <strong>{balance} MNT</strong>
-            </p>
+            <h2>Vaults</h2>
 
             <input
-                type="text"
-                placeholder="Monto en MNT"
+                placeholder="Monto"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
             />
 
-            <br /><br />
+            <table width="100%" style={{ marginTop: "1rem" }}>
+                <thead>
+                    <tr>
+                        <th>Vault</th>
+                        <th>Depositado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {vaults.map((vault) => {
+                        const isLoading = loadingVault === vault.symbol
+                        return (
+                            <tr key={vault.symbol}>
+                                <td>{vault.symbol}</td>
+                                <td>{balances[vault.symbol] ?? "0"}</td>
+                                <td>
+                                    <button
+                                        onClick={() => deposit(vault)}
+                                        disabled={isLoading}
+                                    >
+                                        Depositar
+                                    </button>
+                                    <button
+                                        onClick={() => withdraw(vault)}
+                                        disabled={isLoading}
+                                        style={{ marginLeft: "0.5rem" }}
+                                    >
+                                        Retirar
+                                    </button>
+                                    <button
+                                        onClick={() => withdraw(vault, true)}
+                                        disabled={isLoading}
+                                        style={{ marginLeft: "0.5rem" }}
+                                    >
+                                        Retirar Todo
+                                    </button>
+                                </td>
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
 
-            <button onClick={deposit} disabled={loading}>
-                Depositar
-            </button>
-
-            <button onClick={withdraw} disabled={loading} style={{ marginLeft: "1rem" }}>
-                Retirar
-            </button>
-
-            <button
-                onClick={withdrawMax}
-                disabled={loading || balance === "0"}
-                style={{ marginLeft: "1rem" }}
-            >
-                Retirar Todo
-            </button>
-
-            {txStatus && <p>{txStatus}</p>}
-            {error && <p style={{ color: "red" }}>{error}</p>}
+            {status && <p>{status}</p>}
         </div>
     )
 }
-
-export default Vault
