@@ -13,13 +13,13 @@ export default function FaucetPage() {
     const [balances, setBalances] = useState<Record<string, string>>({})
     const [loadingToken, setLoadingToken] = useState<string | null>(null)
 
+    /* ----------------------------
+       LOAD BALANCES
+    ---------------------------- */
     const loadBalances = async () => {
         if (!walletProvider || !address) return
 
-        if (typeof (walletProvider as any).request !== "function") {
-            console.warn("walletProvider no es EIP-1193 válido")
-            return
-        }
+        if (typeof (walletProvider as any).request !== "function") return
 
         const provider = new ethers.BrowserProvider(
             walletProvider as Eip1193Provider
@@ -43,28 +43,20 @@ export default function FaucetPage() {
         setBalances(newBalances)
     }
 
+    /* ----------------------------
+       FAUCET REQUEST
+    ---------------------------- */
     const request = async (tokenAddress: string) => {
         if (!walletProvider || !address) return
-
-        if (typeof (walletProvider as any).request !== "function") {
-            console.error("walletProvider inválido:", walletProvider)
-            return
-        }
+        if (typeof (walletProvider as any).request !== "function") return
 
         try {
             setLoadingToken(tokenAddress)
 
-            console.log("🟡 Iniciando faucet request")
-            console.log("Token:", tokenAddress)
-            console.log("Usuario:", address)
-
             const provider = new ethers.BrowserProvider(
                 walletProvider as Eip1193Provider
             )
-
             const signer = await provider.getSigner()
-            const signerAddress = await signer.getAddress()
-            console.log("Signer:", signerAddress)
 
             const faucet = new ethers.Contract(
                 FAUCET_ADDRESS,
@@ -72,16 +64,12 @@ export default function FaucetPage() {
                 signer
             )
 
-            console.log("⛓️ Enviando transacción...")
             const tx = await faucet.requestTokens(tokenAddress)
-            console.log("📨 Tx enviada:", tx.hash)
-
             await tx.wait()
-            console.log("✅ Tx confirmada")
 
             await loadBalances()
         } catch (err) {
-            console.error("❌ Error en faucet:", err)
+            console.error("❌ Faucet error:", err)
         } finally {
             setLoadingToken(null)
         }
@@ -91,28 +79,99 @@ export default function FaucetPage() {
         if (isConnected) loadBalances()
     }, [isConnected])
 
+    /* ----------------------------
+       UI
+    ---------------------------- */
     if (!isConnected) {
-        return <p>Conecta tu wallet.</p>
+        return (
+            <div className="flex items-center justify-center min-h-[60vh] text-slate-400">
+                Connect your wallet to use the faucet.
+            </div>
+        )
     }
 
     return (
-        <div style={{ marginTop: "2rem" }}>
-            <h2>Token Faucet</h2>
+        <div className="relative overflow-hidden">
+            {/* Ambient glows */}
+            <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+            <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
 
-            {TOKENS.map((token) => (
-                <div key={token.symbol} style={{ marginBottom: "1rem" }}>
-                    <strong>{token.symbol}</strong>
-                    <p>Balance: {balances[token.symbol] ?? "0"}</p>
-                    <button
-                        onClick={() => request(token.address)}
-                        disabled={loadingToken === token.address}
+            <div className="max-w-[1000px] mx-auto px-4 py-12">
+                {/* Heading */}
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-12">
+                    <div>
+                        <h1 className="text-5xl font-black tracking-tight">
+                            Testnet Faucet
+                        </h1>
+                        <p className="text-slate-400 text-lg mt-2">
+                            Claim test tokens for the Mantle Sepolia.
+                        </p>
+                    </div>
+
+                    <a
+                        href="#"
+                        className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-bold transition-all"
                     >
-                        {loadingToken === token.address
-                            ? "Procesando..."
-                            : `Obtener ${token.symbol}`}
-                    </button>
+                        View Explorer
+                    </a>
                 </div>
-            ))}
+
+                {/* Faucet Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {TOKENS.map((token) => {
+                        const isLoading = loadingToken === token.address
+
+                        return (
+                            <div
+                                key={token.symbol}
+                                className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-xl p-8 flex flex-col items-center hover:scale-[1.02] transition-transform"
+                            >
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 border border-white/10 mb-6 shadow-xl">
+                                    <span className="material-symbols-outlined text-3xl text-primary">
+
+                                    </span>
+                                </div>
+
+                                <h2 className="text-2xl font-bold mb-1">
+                                    {token.symbol}
+                                </h2>
+
+                                <p className="text-slate-400 mb-8">
+                                    Balance:{" "}
+                                    <span className="text-white">
+                                        {balances[token.symbol] ?? "0"}
+                                    </span>
+                                </p>
+
+                                <button
+                                    onClick={() => request(token.address)}
+                                    disabled={isLoading}
+                                    className="w-full h-14 rounded-full bg-primary hover:bg-primary/80 text-white font-bold transition-all shadow-lg shadow-primary/30 disabled:opacity-50"
+                                >
+                                    {isLoading
+                                        ? "Processing..."
+                                        : `Claim ${token.amount ?? "1000"} ${token.symbol}`}
+                                </button>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* Info */}
+                <div className="mt-12 p-6 bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-xl flex gap-4">
+                    <span className="material-symbols-outlined text-primary mt-1">
+                        info
+                    </span>
+                    <div>
+                        <p className="font-bold text-sm mb-1">Note</p>
+                        <p className="text-slate-400 text-sm leading-relaxed">
+                            You can claim test tokens once every 24 hours per
+                            wallet. These tokens are for testing purposes only
+                            on Sepolia.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

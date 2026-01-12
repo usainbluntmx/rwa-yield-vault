@@ -1,21 +1,57 @@
 import { useEffect, useState, useRef } from "react"
 import { ethers } from "ethers"
 import { useAppKitAccount } from "@reown/appkit/react"
-import { vaultAbi } from "../abi/vaultAbi"
 
-const VAULT_ADDRESS = "0x58468524C30935d9C483f3c9B37AB33e911D3757"
+import { customVaultAbi } from "../abi/customVaultAbi"
+import { erc4626VaultAbi } from "../abi/erc4626VaultAbi"
+
+/* ----------------------------
+   CONFIG
+---------------------------- */
+
 const RPC_HTTP = "https://rpc.sepolia.mantle.xyz"
-
-const BLOCK_LOOKBACK = 5000
+const BLOCK_LOOKBACK = 8000
 const MAX_TX = 9
 const HISTORY_CACHE_PREFIX = "vault-history"
+
+const VAULTS = [
+    {
+        symbol: "MNT",
+        vaultAddress: "0x58468524C30935d9C483f3c9B37AB33e911D3757",
+        decimals: 18,
+        type: "custom",
+    },
+    {
+        symbol: "USDC",
+        vaultAddress: "0x5A870E83F8d9bdB093D387A5d632F92E402ABCaC",
+        decimals: 6,
+        type: "erc4626",
+    },
+    {
+        symbol: "USDT",
+        vaultAddress: "0xfFe99C05a0CB04e78257b4Ee0187416e135024c4",
+        decimals: 6,
+        type: "erc4626",
+    },
+    {
+        symbol: "DAI",
+        vaultAddress: "0xe09FD61247D5e9a827136FAbF6E58EcE6ABaea01",
+        decimals: 18,
+        type: "erc4626",
+    },
+] as const
 
 type TxItem = {
     type: "Deposit" | "Withdraw"
     amount: string
+    symbol: string
     txHash: string
     timestamp: number
 }
+
+/* ----------------------------
+   COMPONENT
+---------------------------- */
 
 export default function Profile() {
     const { address, isConnected } = useAppKitAccount()
@@ -36,62 +72,123 @@ export default function Profile() {
             try {
                 setLoading(true)
 
-                // 1️⃣ cache inmediato
                 const cached = localStorage.getItem(cacheKey)
                 if (cached) {
                     const parsed = JSON.parse(cached)
                     setHistory(parsed.history || [])
                 }
 
-                // 2️⃣ escaneo rápido
                 const provider = new ethers.JsonRpcProvider(RPC_HTTP)
-                const contract = new ethers.Contract(
-                    VAULT_ADDRESS,
-                    vaultAbi,
-                    provider
-                )
-
                 const latestBlock = await provider.getBlockNumber()
                 const fromBlock = Math.max(latestBlock - BLOCK_LOOKBACK, 0)
 
-                const deposits = await contract.queryFilter(
-                    contract.filters.Deposit(address),
-                    fromBlock,
-                    latestBlock
-                )
-
-                const withdrawals = await contract.queryFilter(
-                    contract.filters.Withdraw(address),
-                    fromBlock,
-                    latestBlock
-                )
-
                 const txs: TxItem[] = []
 
-                for (const e of deposits) {
-                    const event = e as ethers.EventLog
-                    const block = await provider.getBlock(event.blockNumber)
-                    if (!block) continue
+                for (const vault of VAULTS) {
+                    const abi =
+                        vault.type === "erc4626"
+                            ? erc4626VaultAbi
+                            : customVaultAbi
 
-                    txs.push({
-                        type: "Deposit",
-                        amount: ethers.formatEther(event.args[1]),
-                        txHash: event.transactionHash,
-                        timestamp: block.timestamp,
-                    })
-                }
+                    const contract = new ethers.Contract(
+                        vault.vaultAddress,
+                        abi,
+                        provider
+                    )
 
-                for (const e of withdrawals) {
-                    const event = e as ethers.EventLog
-                    const block = await provider.getBlock(event.blockNumber)
-                    if (!block) continue
+                    if (vault.type === "custom") {
+                        const deposits = await contract.queryFilter(
+                            contract.filters.Deposit(address),
+                            fromBlock,
+                            latestBlock
+                        )
 
-                    txs.push({
-                        type: "Withdraw",
-                        amount: ethers.formatEther(event.args[1]),
-                        txHash: event.transactionHash,
-                        timestamp: block.timestamp,
-                    })
+                        const withdrawals = await contract.queryFilter(
+                            contract.filters.Withdraw(address),
+                            fromBlock,
+                            latestBlock
+                        )
+
+                        for (const e of deposits) {
+                            const event = e as ethers.EventLog
+                            const block = await provider.getBlock(event.blockNumber)
+                            if (!block) continue
+
+                            txs.push({
+                                type: "Deposit",
+                                amount: ethers.formatUnits(
+                                    event.args.amount,
+                                    vault.decimals
+                                ),
+                                symbol: vault.symbol,
+                                txHash: event.transactionHash,
+                                timestamp: block.timestamp,
+                            })
+                        }
+
+                        for (const e of withdrawals) {
+                            const event = e as ethers.EventLog
+                            const block = await provider.getBlock(event.blockNumber)
+                            if (!block) continue
+
+                            txs.push({
+                                type: "Withdraw",
+                                amount: ethers.formatUnits(
+                                    event.args.amount,
+                                    vault.decimals
+                                ),
+                                symbol: vault.symbol,
+                                txHash: event.transactionHash,
+                                timestamp: block.timestamp,
+                            })
+                        }
+                    } else {
+                        const deposits = await contract.queryFilter(
+                            contract.filters.Deposit(null, address),
+                            fromBlock,
+                            latestBlock
+                        )
+
+                        const withdrawals = await contract.queryFilter(
+                            contract.filters.Withdraw(null, null, address),
+                            fromBlock,
+                            latestBlock
+                        )
+
+                        for (const e of deposits) {
+                            const event = e as ethers.EventLog
+                            const block = await provider.getBlock(event.blockNumber)
+                            if (!block) continue
+
+                            txs.push({
+                                type: "Deposit",
+                                amount: ethers.formatUnits(
+                                    event.args.assets,
+                                    vault.decimals
+                                ),
+                                symbol: vault.symbol,
+                                txHash: event.transactionHash,
+                                timestamp: block.timestamp,
+                            })
+                        }
+
+                        for (const e of withdrawals) {
+                            const event = e as ethers.EventLog
+                            const block = await provider.getBlock(event.blockNumber)
+                            if (!block) continue
+
+                            txs.push({
+                                type: "Withdraw",
+                                amount: ethers.formatUnits(
+                                    event.args.assets,
+                                    vault.decimals
+                                ),
+                                symbol: vault.symbol,
+                                txHash: event.transactionHash,
+                                timestamp: block.timestamp,
+                            })
+                        }
+                    }
                 }
 
                 const latestTxs = txs
@@ -100,7 +197,6 @@ export default function Profile() {
 
                 setHistory(latestTxs)
 
-                // 3️⃣ actualizar cache
                 localStorage.setItem(
                     cacheKey,
                     JSON.stringify({
@@ -119,57 +215,96 @@ export default function Profile() {
     }, [isConnected, address])
 
     if (!isConnected) {
-        return <p>Conecta tu wallet para ver tu perfil.</p>
+        return (
+            <p className="text-center mt-20 text-slate-400">
+                Conecta tu wallet para ver tu perfil.
+            </p>
+        )
     }
 
     return (
-        <div style={{ marginTop: "2rem" }}>
-            <h2>Perfil</h2>
+        <main className="relative pt-28 pb-20 px-4 md:px-8 lg:px-20 max-w-[1200px] mx-auto">
+            {/* PROFILE HEADER */}
+            <div className="glass rounded-xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 mb-8">
+                <div className="relative size-32 rounded-full bg-primary/20 flex items-center justify-center text-5xl">
+                    🐓
+                </div>
 
-            <p>
-                <strong>Wallet:</strong>
-                <br />
-                {address}
-            </p>
+                <div className="flex-1 text-center md:text-left">
+                    <h2 className="text-2xl font-bold tracking-tight">
+                        {address.slice(0, 6)}...{address.slice(-4)}
+                    </h2>
+                    <p className="text-slate-400 text-sm mt-1">
+                        Wallet Connected
+                    </p>
+                </div>
+            </div>
 
-            <h3 style={{ marginTop: "2rem" }}>Últimas transacciones</h3>
-
-            {loading && <p>Cargando historial...</p>}
-
-            {!loading && history.length === 0 && (
-                <p>No hay transacciones recientes.</p>
-            )}
-
-            {!loading && history.length > 0 && (
-                <table style={{ width: "100%", marginTop: "1rem" }}>
+            {/* ACTIVITY TABLE */}
+            <div className="glass rounded-xl overflow-hidden">
+                <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr>
-                            <th align="left">Tipo</th>
-                            <th align="left">Monto</th>
-                            <th align="left">Fecha</th>
-                            <th align="left">Tx</th>
+                        <tr className="bg-white/5 border-b border-white/10">
+                            <th className="px-6 py-4 text-sm font-semibold text-slate-300">
+                                Type
+                            </th>
+                            <th className="px-6 py-4 text-sm font-semibold text-slate-300">
+                                Amount
+                            </th>
+                            <th className="px-6 py-4 text-sm font-semibold text-slate-300">
+                                Date
+                            </th>
+                            <th className="px-6 py-4 text-sm font-semibold text-slate-300 text-right">
+                                TX
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+
+                    <tbody className="divide-y divide-white/5">
+                        {loading && (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
+                                    Cargando historial...
+                                </td>
+                            </tr>
+                        )}
+
+                        {!loading && history.length === 0 && (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
+                                    No hay transacciones recientes.
+                                </td>
+                            </tr>
+                        )}
+
                         {history.map(tx => (
-                            <tr key={tx.txHash}>
-                                <td>{tx.type}</td>
-                                <td>{tx.amount} MNT</td>
-                                <td>{new Date(tx.timestamp * 1000).toLocaleString()}</td>
-                                <td>
+                            <tr key={tx.txHash} className="glass-hover transition-colors">
+                                <td className="px-6 py-5 font-medium">
+                                    {tx.type}
+                                </td>
+                                <td className="px-6 py-5 font-bold">
+                                    {tx.amount} {tx.symbol}
+                                </td>
+                                <td className="px-6 py-5 text-slate-300 text-sm">
+                                    {new Date(tx.timestamp * 1000).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-5 text-right">
                                     <a
                                         href={`https://sepolia.mantlescan.xyz/tx/${tx.txHash}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        className="size-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10"
                                     >
-                                        Ver
+                                        <span className="material-symbols-outlined text-sm">
+                                            open_in_new
+                                        </span>
                                     </a>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
-            )}
-        </div>
+            </div>
+        </main>
     )
 }

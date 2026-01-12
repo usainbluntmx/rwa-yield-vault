@@ -27,7 +27,7 @@ const asAddress = (addr?: string) => {
 }
 
 export default function Vault({ address, vaults }: VaultProps) {
-    const [amount, setAmount] = useState("")
+    const [amounts, setAmounts] = useState<Record<string, string>>({})
     const [balances, setBalances] = useState<Record<string, string>>({})
     const [loadingVault, setLoadingVault] = useState<string | null>(null)
     const [status, setStatus] = useState("")
@@ -60,7 +60,6 @@ export default function Vault({ address, vaults }: VaultProps) {
                     const raw: bigint = await contract.balances(address)
                     next[vault.symbol] = ethers.formatEther(raw)
                 } else {
-                    // ✅ shares → assets
                     const shares: bigint = await contract.balanceOf(address)
                     const assets: bigint =
                         shares === 0n
@@ -72,8 +71,7 @@ export default function Vault({ address, vaults }: VaultProps) {
                         vault.decimals
                     )
                 }
-            } catch (err) {
-                console.error(`Error loading balance for ${vault.symbol}`, err)
+            } catch {
                 next[vault.symbol] = "0"
             }
         }
@@ -88,14 +86,15 @@ export default function Vault({ address, vaults }: VaultProps) {
     }, [address, provider])
 
     /* ----------------------------
-       DEPOSIT (YA CORRECTO)
+       DEPOSIT
     ---------------------------- */
     const deposit = async (vault: VaultConfig) => {
+        const amount = amounts[vault.symbol]
         if (!amount || !address || !provider) return
 
         try {
             setLoadingVault(vault.symbol)
-            setStatus("⏳ Procesando depósito...")
+            setStatus("⏳ Processing deposit...")
 
             const signer = await provider.getSigner()
             const vaultContract = new ethers.Contract(
@@ -135,31 +134,31 @@ export default function Vault({ address, vaults }: VaultProps) {
                 await tx.wait()
             }
 
-            setAmount("")
+            setAmounts((prev) => ({ ...prev, [vault.symbol]: "" }))
             await loadBalances()
-            setStatus("✅ Depósito exitoso")
+            setStatus("✅ Deposit successful")
         } catch (err: any) {
-            console.error(err)
-            setStatus(`❌ ${err.message ?? "Error en depósito"}`)
+            setStatus(`❌ ${err.message ?? "Deposit error"}`)
         } finally {
             setLoadingVault(null)
         }
     }
 
     /* ----------------------------
-       WITHDRAW (ERC-4626 FIX)
+       WITHDRAW
     ---------------------------- */
     const withdraw = async (vault: VaultConfig, all = false) => {
+        const amount = amounts[vault.symbol]
         if (!provider || !address) return
 
         if (!all && !amount) {
-            setStatus("❌ Ingresa un monto")
+            setStatus("❌ Enter an amount")
             return
         }
 
         try {
             setLoadingVault(vault.symbol)
-            setStatus("⏳ Procesando retiro...")
+            setStatus("⏳ Processing withdrawal...")
 
             const signer = await provider.getSigner()
             const vaultContract = new ethers.Contract(
@@ -182,7 +181,7 @@ export default function Vault({ address, vaults }: VaultProps) {
                     )
 
                 if (shares === 0n) {
-                    setStatus("❌ Monto inválido")
+                    setStatus("❌ Invalid amount")
                     return
                 }
 
@@ -194,12 +193,11 @@ export default function Vault({ address, vaults }: VaultProps) {
                 await tx.wait()
             }
 
-            setAmount("")
+            setAmounts((prev) => ({ ...prev, [vault.symbol]: "" }))
             await loadBalances()
-            setStatus("✅ Retiro exitoso")
+            setStatus("✅ Withdrawal successful")
         } catch (err: any) {
-            console.error(err)
-            setStatus(`❌ ${err.message ?? "Error en retiro"}`)
+            setStatus(`❌ ${err.message ?? "Withdraw error"}`)
         } finally {
             setLoadingVault(null)
         }
@@ -210,58 +208,87 @@ export default function Vault({ address, vaults }: VaultProps) {
     ---------------------------- */
     return (
         <div>
-            <h2>Vaults</h2>
+            <h1 className="text-5xl font-bold mb-10">Vaults</h1>
 
-            <input
-                placeholder="Monto"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-            />
+            <div className="rounded-xl overflow-hidden border border-white/10 backdrop-blur-xl bg-white/[0.03]">
+                <table className="w-full text-left">
+                    <thead className="bg-white/5">
+                        <tr>
+                            <th className="px-6 py-4 text-xs uppercase text-slate-400">Asset</th>
+                            <th className="px-6 py-4 text-xs uppercase text-slate-400">Deposited</th>
+                            <th className="px-6 py-4 text-xs uppercase text-slate-400">Amount</th>
+                            <th className="px-6 py-4 text-xs uppercase text-slate-400 text-right">Actions</th>
+                        </tr>
+                    </thead>
 
-            <table width="100%" style={{ marginTop: "1rem" }}>
-                <thead>
-                    <tr>
-                        <th>Vault</th>
-                        <th>Depositado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {vaults.map((vault) => {
-                        const isLoading = loadingVault === vault.symbol
-                        return (
-                            <tr key={vault.symbol}>
-                                <td>{vault.symbol}</td>
-                                <td>{balances[vault.symbol] ?? "0"}</td>
-                                <td>
-                                    <button
-                                        onClick={() => deposit(vault)}
-                                        disabled={isLoading}
-                                    >
-                                        Depositar
-                                    </button>
-                                    <button
-                                        onClick={() => withdraw(vault)}
-                                        disabled={isLoading}
-                                        style={{ marginLeft: "0.5rem" }}
-                                    >
-                                        Retirar
-                                    </button>
-                                    <button
-                                        onClick={() => withdraw(vault, true)}
-                                        disabled={isLoading}
-                                        style={{ marginLeft: "0.5rem" }}
-                                    >
-                                        Retirar Todo
-                                    </button>
-                                </td>
-                            </tr>
-                        )
-                    })}
-                </tbody>
-            </table>
+                    <tbody className="divide-y divide-white/5">
+                        {vaults.map((vault) => {
+                            const isLoading = loadingVault === vault.symbol
 
-            {status && <p>{status}</p>}
+                            return (
+                                <tr key={vault.symbol}>
+                                    <td className="px-6 py-5 font-semibold">
+                                        {vault.symbol}
+                                    </td>
+
+                                    <td className="px-6 py-5 text-slate-300">
+                                        {balances[vault.symbol] ?? "0"}
+                                    </td>
+
+                                    <td className="px-6 py-5">
+                                        <input
+                                            type="text"
+                                            placeholder="0.0"
+                                            value={amounts[vault.symbol] ?? ""}
+                                            onChange={(e) =>
+                                                setAmounts((prev) => ({
+                                                    ...prev,
+                                                    [vault.symbol]: e.target.value,
+                                                }))
+                                            }
+                                            className="w-28 px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none"
+                                        />
+                                    </td>
+
+                                    <td className="px-6 py-5 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                onClick={() => deposit(vault)}
+                                                disabled={isLoading}
+                                                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold"
+                                            >
+                                                Deposit
+                                            </button>
+
+                                            <button
+                                                onClick={() => withdraw(vault)}
+                                                disabled={isLoading}
+                                                className="px-4 py-2 rounded-full border border-primary text-primary text-sm font-bold"
+                                            >
+                                                Withdraw
+                                            </button>
+
+                                            <button
+                                                onClick={() => withdraw(vault, true)}
+                                                disabled={isLoading}
+                                                className="px-4 py-2 rounded-full border border-white/20 text-slate-300 text-sm"
+                                            >
+                                                All
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            </div>
+
+            {status && (
+                <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
+                    {status}
+                </div>
+            )}
         </div>
     )
 }
