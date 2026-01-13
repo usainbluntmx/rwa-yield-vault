@@ -110,7 +110,9 @@ export default function FaucetPage() {
                     </div>
 
                     <a
-                        href="#"
+                        href="https://sepolia.mantlescan.xyz/address/0x0cc9caccadfc678fc80277705e9a4329cbc3283b"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-bold transition-all"
                     >
                         View Explorer

@@ -1,207 +1,225 @@
---------------------------------------------------
+🐓 Gallito DeFi — On-chain Yield Vaults for Crypto & Tokenized Stocks
 
-🏦 RWA Yield Vault – Mantle Network
-
-📌 Resumen
-
-RWA Yield Vault es una dApp simple y funcional desplegada sobre Mantle Sepolia Testnet que permite a los usuarios depositar y retirar el token nativo MNT de forma segura, transparente y no custodial.
-
-El proyecto está diseñado como un bloque base (building block) para futuros productos RealFi / RWA, donde los depósitos podrían representar exposición a activos del mundo real o estrategias de yield reguladas.
-
-Este MVP prioriza funcionalidad real y confiabilidad, evitando simulaciones o features cosméticas.
+Built on Mantle Network
 
 --------------------------------------------------
 
-🎯 Problema que resuelve
+📌 Overview
 
-En el ecosistema RealFi y RWA, muchos proyectos:
+Gallito DeFi is a non-custodial DeFi dApp deployed on Mantle Sepolia Testnet that allows users to deposit and withdraw on-chain assets through ERC-4626 vaults, while displaying realistic, transparent yield estimates.
 
-- Prometen yield sin mecanismos claros
-- No muestran estados reales on-chain
-- Tienen UX frágil (errores silenciosos, balances incorrectos)
-- No permiten control granular del capital
+The platform currently supports:
 
-RWA Yield Vault resuelve esto proporcionando:
+- Native token: MNT
+- Stablecoins: USDC, USDT, DAI
+- Tokenized stocks (simulated): AAPLx, TSLAx, NVDAx
 
-- Control total del usuario sobre sus fondos
-- Depósitos y retiros parciales
-- Balance reflejado directamente desde el contrato
-- Integración nativa con Mantle (bajo costo y alta eficiencia)
+Gallito DeFi is designed as a RealFi / RWA building block, where the current vault system serves as a foundation for future integration of:
 
---------------------------------------------------
+- real yield
+- real-world assets
+- compliance-ready financial flows
 
-🧩 Solución
+The project prioritizes:
 
-Una bóveda (vault) on-chain donde:
-
-- Los usuarios depositan MNT
-- El contrato mantiene un balance individual por usuario
-- Los usuarios pueden retirar cualquier monto parcial cuando lo deseen
-- La UI refleja el estado real del contrato en todo momento
-
-El diseño es intencionalmente simple para:
-
-- facilitar auditoría
-- reducir superficie de ataque
-- servir como base para futuras extensiones (yield, RWA, compliance)
+- clean on-chain logic
+- reliable UX
+- extensibility without compromising security
 
 --------------------------------------------------
 
-⚙️ Cómo funciona
+🎯 Problem
 
-1. Conexión de wallet
+In the DeFi and RWA ecosystem, many products:
 
-- Detección automática de MetaMask
-- Cambio automático a Mantle Sepolia Testnet
+- Advertise unclear or inflated yields
+- Hide how user capital actually works
+- Mix custody, vault logic, and UI concerns
+- Simulate balances off-chain
+- Are difficult to audit or extend safely
 
-2. Depósito
-
-- El usuario ingresa un monto en MNT
-- Confirma la transacción
-- El contrato recibe los fondos
-- El balance se actualiza desde la blockchain
-
-3. Retiro
-
-- El usuario ingresa el monto a retirar
-- Puede ser parcial o total
-- El contrato transfiere los fondos directamente al usuario
-- El balance restante se refleja correctamente
+This leads to user distrust, poor UX, and unnecessary risk.
 
 --------------------------------------------------
 
-🛠️ Stack tecnológico
+🧩 Solution
 
+Gallito DeFi provides a simple, modular, and elegant solution:
+
+- Fully on-chain vaults per asset (ERC-4626)
+- Full user control over deposited capital
+- Partial and full deposits & withdrawals
+- Balances read directly from smart contracts
+- Realistic simulated yield, decoupled from the vault logic
+- Architecture ready to migrate to real yield without breaking the UI
+
+Each asset lives in its own vault, minimizing coupling and reducing attack surface.
+
+--------------------------------------------------
+
+⚙️ How It Works
+1️⃣ Wallet Connection
+
+- AppKit / WalletConnect integration
+- EVM Wallet support
+- Automatic Mantle Sepolia detection
+
+2️⃣ Deposit
+
+- User selects an asset (MNT, stable, or stock)
+- Enters an amount
+- Approves token if required
+- Deposits into the corresponding vault
+- Balance updates on-chain
+
+3️⃣ Withdraw
+
+- Partial or full withdrawals
+- Correct shares → assets conversion (ERC-4626)
+- Direct transfer back to the user
+- Real-time UI updates
+
+4️⃣ Yield (Simulated)
+
+- Realistic APY per asset
+- Daily and monthly estimates shown in UI
+- Yield engine decoupled from contracts
+- Ready to be replaced by real yield sources
+
+--------------------------------------------------
+
+🛠️ Tech Stack
 Smart Contracts
 
 - Solidity ^0.8.20
+- OpenZeppelin (ERC20, ERC4626, Ownable)
 - Hardhat
 - ethers.js v6
-- Tests unitarios incluidos
 
 Frontend
 
 - Vite
 - React + TypeScript
 - ethers.js
-- MetaMask (EIP-1193)
+- AppKit (Reown)
+- TailwindCSS
 
 Blockchain
 
 - Mantle Sepolia Testnet
-- Token nativo: MNT
+- Native token: MNT
 
 --------------------------------------------------
 
-📜 Contrato desplegado
+📦 Supported Assets
+Crypto
 
-- Red: Mantle Sepolia Testnet
-- Dirección:
+- MNT (native)
+- USDC
+- USDT
+- DAI
 
-0xcE9A8305391747f8bF34B18Ae37a434c59060Ce2
+Tokenized Stocks (Simulated)
 
-- Explorer:
+- AAPLx
+- TSLAx
+- NVDAx
 
-https://sepolia.mantlescan.xyz/address/0xcE9A8305391747f8bF34B18Ae37a434c59060Ce2
+⚠️ Stock tokens are mock assets used to test RealFi / RWA flows.
+They do not represent real equities in this MVP.
 
 --------------------------------------------------
 
-🚀 Cómo probar el proyecto
+🚀 Getting Started
+Requirements
 
-Requisitos
+- MetaMask or compatible wallet with EVM ecosystem
+- Test MNT (Mantle Sepolia faucet)
 
-- MetaMask
-- MNT de prueba (Mantle Sepolia faucet)
+Steps
 
-Pasos
+- git clone https://github.com/usainbluntmx/rwa-yield-vault
+- cd rwa-yield-vault/frontend
+- npm install
+- npm run dev
 
-1.Clona el repositorio
-
-git clone https://github.com/tu-usuario/rwa-yield-vault
-cd rwa-yield-vault/frontend
-
-2. Instala dependencias
-
-npm install
-
-3. Ejecuta el frontend
-
-npm run dev
-
-4. Abre la app, conecta tu wallet y prueba:
-
-- Depositar MNT
-- Retirar MNT (parcial o total)
+1. Open the app
+2. Connect your wallet
+3. Deposit into any vault
+4. Monitor balances and estimated yield
+5. Withdraw partially or fully
 
 --------------------------------------------------
 
 🧪 Tests
 
-El contrato incluye tests unitarios que validan:
+The contracts include unit tests covering:
 
-- Depósitos correctos
-- Acumulación de balance por usuario
-- Retiros parciales y totales
-
-Ejecutar tests:
+- Correct vault deployment
+- ERC-20 and native deposits
+- Shares ↔ assets conversion
+- Partial and full withdrawals
 
 npx hardhat test
 
 --------------------------------------------------
 
-🔐 Consideraciones de seguridad
+🔐 Security Considerations
 
-- Proyecto no custodial
-- No se manejan claves privadas
-- No se utilizan permisos administrativos
-- El MVP no genera yield real aún
-- El diseño está pensado para ser extendido con módulos auditables
+- Non-custodial
+- No private keys handled
+- No privileged admin logic
+- Yield logic separated from financial core
+- Architecture designed for incremental audits
+
+This MVP does not generate real yield yet.
 
 --------------------------------------------------
 
 🗺️ Roadmap
+Short Term
 
-Corto plazo
+- User transaction history
+- On-chain events → reactive UI
+- Withdraw Max button
+- Active network indicator
 
-- Eventos on-chain → actualización automática del UI
-- Botón "Withdraw Max"
+Mid Term
 
-Mediano plazo
+- Real yield integration (Aave / LST / RWA proxies)
+- Strategy-specific vaults
+- Oracle pricing for tokenized stocks
+- Advanced asset dashboards
 
-- Integración de yield (simulado o real)
-- Módulo RWA (bonos, facturas, real estate tokenizado)
-- Pruebas de estrés y auditoría
+Long Term
 
-Largo plazo
-
+- Real RWA integrations
 - Compliance-ready flows (KYC / ZK-KYC)
-- Distribución de yield regulada
-- Integración con oráculos y proveedores off-chain
+- Regulated yield distribution
+- Multi-chain deployment
 
 --------------------------------------------------
 
-🧠 Por qué Mantle
+🧠 Why Mantle?
 
-Mantle ofrece:
+Mantle offers:
 
-- Bajo costo de transacción
-- Alta compatibilidad EVM
-- Infraestructura modular ideal para RealFi
-- Excelente UX para aplicaciones financieras reales
+- Low transaction costs
+- Full EVM compatibility
+- Modular infrastructure
+- Excellent UX for real financial applications
 
-Este proyecto aprovecha esas ventajas para construir una base sólida y escalable.
-
---------------------------------------------------
-
-👥 Equipo
-
-- Desarrollador: Ricardo Fuentes
-- Contacto: j.ricardo.df@gmail.com
+Gallito DeFi leverages Mantle as a foundation for next-generation RealFi RWA future.
 
 --------------------------------------------------
 
-📄 Licencia
+👥 Team
+
+- Developer: Ricardo Fuentes
+- Contact: j.ricardo.df@gmail.com
+
+--------------------------------------------------
+
+📄 License
 
 - MIT
-
---------------------------------------------------

@@ -227,7 +227,7 @@ export default function Profile() {
                     })
                 )
             } catch (err) {
-                console.error("Error cargando historial:", err)
+                console.error("Error loading history:", err)
             } finally {
                 setLoading(false)
             }
@@ -239,7 +239,7 @@ export default function Profile() {
     if (!isConnected) {
         return (
             <p className="text-center mt-20 text-slate-400">
-                Conecta tu wallet para ver tu perfil.
+                Connect your wallet to view your profile.
             </p>
         )
     }
@@ -286,7 +286,7 @@ export default function Profile() {
                         {loading && (
                             <tr>
                                 <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
-                                    Cargando historial...
+                                    Loading history...
                                 </td>
                             </tr>
                         )}
@@ -294,7 +294,7 @@ export default function Profile() {
                         {!loading && history.length === 0 && (
                             <tr>
                                 <td colSpan={4} className="px-6 py-10 text-center text-slate-400">
-                                    No hay transacciones recientes.
+                                    There are no recent transactions.
                                 </td>
                             </tr>
                         )}
