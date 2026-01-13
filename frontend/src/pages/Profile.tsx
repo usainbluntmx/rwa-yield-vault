@@ -296,7 +296,7 @@ export default function Profile() {
                                         className="size-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10"
                                     >
                                         <span className="material-symbols-outlined text-sm">
-                                            open_in_new
+                                            ⮕
                                         </span>
                                     </a>
                                 </td>

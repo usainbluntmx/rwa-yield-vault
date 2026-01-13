@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react"
 import { ethers } from "ethers"
 import { mockErc20Abi } from "../abi/mockErc20Abi"
 import { vaultAbi, erc20VaultAbi } from "../abi/vaultAbi"
+import {
+    getHybridApy,
+    getDailyYield,
+    getMonthlyYield,
+} from "../utils/yieldEngine"
 
 export interface VaultConfig {
     symbol: string
@@ -217,6 +222,7 @@ export default function Vault({ address, vaults }: VaultProps) {
                             <th className="px-6 py-4 text-xs uppercase text-slate-400">Asset</th>
                             <th className="px-6 py-4 text-xs uppercase text-slate-400">Deposited</th>
                             <th className="px-6 py-4 text-xs uppercase text-slate-400">Amount</th>
+                            <th className="px-6 py-4 text-xs uppercase text-slate-400">Yield</th>
                             <th className="px-6 py-4 text-xs uppercase text-slate-400 text-right">Actions</th>
                         </tr>
                     </thead>
@@ -224,6 +230,16 @@ export default function Vault({ address, vaults }: VaultProps) {
                     <tbody className="divide-y divide-white/5">
                         {vaults.map((vault) => {
                             const isLoading = loadingVault === vault.symbol
+
+                            /* -------- YIELD (SIMULATED BUT REALISTIC) -------- */
+                            const apy = getHybridApy(vault.symbol as any)
+                            const deposited = Number(balances[vault.symbol] ?? 0)
+
+                            const dailyRate = getDailyYield(apy) / 100
+                            const monthlyRate = getMonthlyYield(apy) / 100
+
+                            const dailyGain = deposited * dailyRate
+                            const monthlyGain = deposited * monthlyRate
 
                             return (
                                 <tr key={vault.symbol}>
@@ -248,6 +264,20 @@ export default function Vault({ address, vaults }: VaultProps) {
                                             }
                                             className="w-28 px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none"
                                         />
+                                    </td>
+
+                                    <td className="px-6 py-5">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="font-semibold text-emerald-400">
+                                                {apy}% APY
+                                            </span>
+                                            <span className="text-xs text-slate-400">
+                                                +{dailyGain.toFixed(6)} {vault.symbol} / day
+                                            </span>
+                                            <span className="text-xs text-slate-400">
+                                                +{monthlyGain.toFixed(6)} {vault.symbol} / month
+                                            </span>
+                                        </div>
                                     </td>
 
                                     <td className="px-6 py-5 text-right">
