@@ -14,6 +14,24 @@ export const TOKENS = [
         decimals: 18,
         address: "0xf6C6aa8dFd32618F8d3703F0BcB40456c032fbb3",
     },
+    {
+        symbol: "AAPLx",
+        address: "0x449630e4018fE2260A0d456297BcC6f9F04E8238",
+        decimals: 18,
+        amount: "10",
+    },
+    {
+        symbol: "TSLAx",
+        address: "0x9FC171B232b173B76d200dB2B605fE1FdbCdA69F",
+        decimals: 18,
+        amount: "5",
+    },
+    {
+        symbol: "NVDAx",
+        address: "0xC5c06386D0863D9919D186FF309AE3532C6606e9",
+        decimals: 18,
+        amount: "3",
+    },
 ]
 
 export const FAUCET_ADDRESS = "0x0CC9cAcCaDfc678Fc80277705e9A4329CBc3283B"

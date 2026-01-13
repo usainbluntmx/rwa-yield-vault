@@ -11,7 +11,7 @@ import { erc4626VaultAbi } from "../abi/erc4626VaultAbi"
 
 const RPC_HTTP = "https://rpc.sepolia.mantle.xyz"
 const BLOCK_LOOKBACK = 8000
-const MAX_TX = 9
+const MAX_TX = 14
 const HISTORY_CACHE_PREFIX = "vault-history"
 
 const VAULTS = [
@@ -36,6 +36,28 @@ const VAULTS = [
     {
         symbol: "DAI",
         vaultAddress: "0xe09FD61247D5e9a827136FAbF6E58EcE6ABaea01",
+        decimals: 18,
+        type: "erc4626",
+    },
+
+    /* ----------------------------
+       STOCK VAULTS
+    ---------------------------- */
+    {
+        symbol: "AAPLx",
+        vaultAddress: "0xc913FDD52e7331bee3619202D6AC0b7f337DcE68",
+        decimals: 18,
+        type: "erc4626",
+    },
+    {
+        symbol: "TSLAx",
+        vaultAddress: "0x14330330dB0A57C55c4aD8B8945c92c32Ce1aB21",
+        decimals: 18,
+        type: "erc4626",
+    },
+    {
+        symbol: "NVDAx",
+        vaultAddress: "0x23bCA52b518de45B83B3f2B4D92a066eee9a7636",
         decimals: 18,
         type: "erc4626",
     },

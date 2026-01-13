@@ -28,6 +28,27 @@ export const VAULTS: VaultConfig[] = [
         tokenAddress: import.meta.env.VITE_DAI_ADDRESS!,
         vaultAddress: import.meta.env.VITE_DAI_VAULT!,
     },
+    {
+        symbol: "AAPLx",
+        decimals: 18,
+        isNative: false,
+        tokenAddress: import.meta.env.VITE_AAPL_ADDRESS!,
+        vaultAddress: import.meta.env.VITE_AAPL_VAULT!,
+    },
+    {
+        symbol: "TSLAx",
+        decimals: 18,
+        isNative: false,
+        tokenAddress: import.meta.env.VITE_TSLA_ADDRESS!,
+        vaultAddress: import.meta.env.VITE_TSLA_VAULT!,
+    },
+    {
+        symbol: "NVDAx",
+        decimals: 18,
+        isNative: false,
+        tokenAddress: import.meta.env.VITE_NVDA_ADDRESS!,
+        vaultAddress: import.meta.env.VITE_NVDA_VAULT!,
+    },
 ]
 
 export const VAULTS_ADDRESS = import.meta.env.VITE_VAULT_MANAGER_ADDRESS!

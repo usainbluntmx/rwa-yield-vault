@@ -1,13 +1,28 @@
-export type AssetSymbol = "MNT" | "USDC" | "USDT" | "DAI"
+export type AssetSymbol =
+    | "MNT"
+    | "USDC"
+    | "USDT"
+    | "DAI"
+    | "AAPLx"
+    | "TSLAx"
+    | "NVDAx"
 
 /* ---------------------------------
    BASE APYs (realistas, mainnet-like)
 ---------------------------------- */
 const BASE_APY: Record<AssetSymbol, number> = {
+    // L1 / native
     MNT: 4.8,
+
+    // Stablecoins
     USDC: 5.2,
     USDT: 5.0,
     DAI: 4.9,
+
+    // Tokenized stocks (más riesgo → mayor APY)
+    AAPLx: 7.2,
+    TSLAx: 9.4,
+    NVDAx: 8.6,
 }
 
 /* ---------------------------------

@@ -18,7 +18,6 @@ export default function FaucetPage() {
     ---------------------------- */
     const loadBalances = async () => {
         if (!walletProvider || !address) return
-
         if (typeof (walletProvider as any).request !== "function") return
 
         const provider = new ethers.BrowserProvider(
@@ -33,7 +32,9 @@ export default function FaucetPage() {
                 mockErc20Abi,
                 provider
             )
+
             const balance = await contract.balanceOf(address)
+
             newBalances[token.symbol] = ethers.formatUnits(
                 balance,
                 token.decimals
@@ -104,7 +105,7 @@ export default function FaucetPage() {
                             Testnet Faucet
                         </h1>
                         <p className="text-slate-400 text-lg mt-2">
-                            Claim test tokens for the Mantle Sepolia.
+                            Claim test tokens for Mantle Sepolia.
                         </p>
                     </div>
 
@@ -126,9 +127,10 @@ export default function FaucetPage() {
                                 key={token.symbol}
                                 className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-xl p-8 flex flex-col items-center hover:scale-[1.02] transition-transform"
                             >
+                                {/* ICON */}
                                 <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 border border-white/10 mb-6 shadow-xl">
-                                    <span className="material-symbols-outlined text-3xl text-primary">
-
+                                    <span className="text-xl font-black text-primary">
+                                        {token.icon ?? token.symbol[0]}
                                     </span>
                                 </div>
 
@@ -167,7 +169,7 @@ export default function FaucetPage() {
                         <p className="text-slate-400 text-sm leading-relaxed">
                             You can claim test tokens once every 24 hours per
                             wallet. These tokens are for testing purposes only
-                            on Sepolia.
+                            on Mantle Sepolia.
                         </p>
                     </div>
                 </div>

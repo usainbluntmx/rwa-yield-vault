@@ -2,17 +2,32 @@
    Yield Estimator (Simulated)
 --------------------------------- */
 
-export type SupportedAsset = "MNT" | "USDC" | "USDT" | "DAI"
+export type SupportedAsset =
+    | "MNT"
+    | "USDC"
+    | "USDT"
+    | "DAI"
+    | "AAPLx"
+    | "TSLAx"
+    | "NVDAx"
 
 /**
- * APY realista basado en protocolos reales (Aave / Lido / Beefy aprox)
- * Valores estáticos pero coherentes por activo
+ * APY realista basado en protocolos reales
+ * (Aave / Beefy / GMX / Synthetix aprox)
  */
 const BASE_APY: Record<SupportedAsset, number> = {
+    // Native
     MNT: 8.5,
+
+    // Stablecoins
     USDC: 4.2,
     USDT: 4.8,
     DAI: 5.5,
+
+    // Tokenized stocks
+    AAPLx: 6.8,
+    TSLAx: 9.1,
+    NVDAx: 8.3,
 }
 
 export function getHybridApy(asset: SupportedAsset): number {
@@ -21,7 +36,7 @@ export function getHybridApy(asset: SupportedAsset): number {
 
 /**
  * Calcula ganancia estimada diaria y mensual
- * Usamos interés simple (como la mayoría de dashboards DeFi)
+ * Interés simple (estilo dashboards DeFi)
  */
 export function estimateYield(
     asset: SupportedAsset,

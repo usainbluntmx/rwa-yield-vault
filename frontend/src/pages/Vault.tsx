@@ -303,7 +303,7 @@ export default function Vault({ address, vaults }: VaultProps) {
                                                 disabled={isLoading}
                                                 className="px-4 py-2 rounded-full border border-white/20 text-slate-300 text-sm"
                                             >
-                                                All
+                                                Withdraw All
                                             </button>
                                         </div>
                                     </td>
