@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { ethers } from "ethers"
+import { useAppKitProvider } from "@reown/appkit/react"
+
 import { mockErc20Abi } from "../abi/mockErc20Abi"
 import { vaultAbi, erc20VaultAbi } from "../abi/vaultAbi"
 import {
@@ -22,21 +24,27 @@ interface VaultProps {
 }
 
 export default function Vault({ address, vaults }: VaultProps) {
+    const { walletProvider } = useAppKitProvider("eip155")
+
     const [amounts, setAmounts] = useState<Record<string, string>>({})
     const [balances, setBalances] = useState<Record<string, string>>({})
     const [loadingVault, setLoadingVault] = useState<string | null>(null)
     const [status, setStatus] = useState("")
 
     /* ----------------------------
-       PROVIDER
+       PROVIDER (DESKTOP + MOBILE)
     ---------------------------- */
     const provider = useMemo(() => {
-        if (!(window as any).ethereum) return null
-        return new ethers.BrowserProvider((window as any).ethereum)
-    }, [])
+        if (!walletProvider) return null
+
+        return new ethers.BrowserProvider(
+            walletProvider as unknown as ethers.Eip1193Provider
+        )
+    }, [walletProvider])
+
 
     /* ----------------------------
-       LOAD BALANCES (ERC-4626 FIX)
+       LOAD BALANCES
     ---------------------------- */
     const loadBalances = async () => {
         if (!address || !provider) return
@@ -111,7 +119,6 @@ export default function Vault({ address, vaults }: VaultProps) {
                 )
 
                 const parsed = ethers.parseUnits(amount, vault.decimals)
-
                 const allowance: bigint = await token.allowance(
                     address,
                     vault.vaultAddress
@@ -205,8 +212,8 @@ export default function Vault({ address, vaults }: VaultProps) {
         <div>
             <h1 className="text-5xl font-bold mb-10">Vaults</h1>
 
-            <div className="rounded-xl overflow-hidden border border-white/10 backdrop-blur-xl bg-white/[0.03]">
-                <table className="w-full text-left">
+            <div className="rounded-xl border border-white/10 backdrop-blur-xl bg-white/[0.03] overflow-x-auto">
+                <table className="w-full min-w-[800px] text-left">
                     <thead className="bg-white/5">
                         <tr>
                             <th className="px-6 py-4 text-xs uppercase text-slate-400">Asset</th>
@@ -221,15 +228,13 @@ export default function Vault({ address, vaults }: VaultProps) {
                         {vaults.map((vault) => {
                             const isLoading = loadingVault === vault.symbol
 
-                            /* -------- YIELD (SIMULATED BUT REALISTIC) -------- */
                             const apy = getHybridApy(vault.symbol as any)
                             const deposited = Number(balances[vault.symbol] ?? 0)
 
-                            const dailyRate = getDailyYield(apy) / 100
-                            const monthlyRate = getMonthlyYield(apy) / 100
-
-                            const dailyGain = deposited * dailyRate
-                            const monthlyGain = deposited * monthlyRate
+                            const dailyGain =
+                                deposited * (getDailyYield(apy) / 100)
+                            const monthlyGain =
+                                deposited * (getMonthlyYield(apy) / 100)
 
                             return (
                                 <tr key={vault.symbol}>
@@ -252,7 +257,7 @@ export default function Vault({ address, vaults }: VaultProps) {
                                                     [vault.symbol]: e.target.value,
                                                 }))
                                             }
-                                            className="w-28 px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none"
+                                            className="w-24 px-3 py-2 rounded-lg bg-white/5 border border-white/10 focus:border-primary outline-none"
                                         />
                                     </td>
 
@@ -262,16 +267,16 @@ export default function Vault({ address, vaults }: VaultProps) {
                                                 {apy}% APY
                                             </span>
                                             <span className="text-xs text-slate-400">
-                                                +{dailyGain.toFixed(6)} {vault.symbol} / day
+                                                +{dailyGain.toFixed(6)} / day
                                             </span>
                                             <span className="text-xs text-slate-400">
-                                                +{monthlyGain.toFixed(6)} {vault.symbol} / month
+                                                +{monthlyGain.toFixed(6)} / month
                                             </span>
                                         </div>
                                     </td>
 
                                     <td className="px-6 py-5 text-right">
-                                        <div className="flex justify-end gap-2">
+                                        <div className="flex flex-col md:flex-row justify-end gap-2">
                                             <button
                                                 onClick={() => deposit(vault)}
                                                 disabled={isLoading}

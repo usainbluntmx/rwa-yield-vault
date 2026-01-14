@@ -40,12 +40,19 @@ export default function StocksVault({ address }: StocksVaultProps) {
     )
 
     return (
-        <div className="space-y-14">
+        <div className="space-y-10 md:space-y-14">
             {/* TITLE */}
-            <h1 className="text-5xl font-bold">Stock Prices</h1>
+            <div className="flex flex-col gap-2">
+                <h1 className="text-3xl md:text-5xl font-bold">
+                    Stock Prices
+                </h1>
+                <p className="text-sm text-slate-400 max-w-xl">
+                    Tokenized equities with simulated real-time pricing.
+                </p>
+            </div>
 
             {/* PRICE CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {stockVaults.map((vault) => {
                     const meta = STOCK_META[vault.symbol]
                     const price = MOCK_PRICES[vault.symbol]
@@ -54,11 +61,11 @@ export default function StocksVault({ address }: StocksVaultProps) {
                     return (
                         <div
                             key={vault.symbol}
-                            className="glass rounded-xl p-6 transition-transform hover:-translate-y-1"
+                            className="glass rounded-xl p-5 md:p-6 transition-transform hover:-translate-y-1"
                         >
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 className="text-lg font-bold">
+                                    <h3 className="text-base md:text-lg font-bold">
                                         {meta.ticker}
                                     </h3>
                                     <p className="text-xs text-white/40">
@@ -68,8 +75,8 @@ export default function StocksVault({ address }: StocksVaultProps) {
 
                                 <span
                                     className={`text-xs font-bold px-2 py-1 rounded ${positive
-                                        ? "text-green-500 bg-green-500/10"
-                                        : "text-red-500 bg-red-500/10"
+                                            ? "text-green-500 bg-green-500/10"
+                                            : "text-red-500 bg-red-500/10"
                                         }`}
                                 >
                                     {positive ? "+" : ""}
@@ -77,7 +84,7 @@ export default function StocksVault({ address }: StocksVaultProps) {
                                 </span>
                             </div>
 
-                            <p className="text-2xl font-bold">
+                            <p className="text-xl md:text-2xl font-bold">
                                 ${price.price.toFixed(2)}
                             </p>
 
@@ -89,8 +96,10 @@ export default function StocksVault({ address }: StocksVaultProps) {
                 })}
             </div>
 
-            {/* 🔁 REUSED VAULT TABLE */}
-            <Vault address={address} vaults={stockVaults} />
+            {/* VAULT TABLE */}
+            <div className="pt-4">
+                <Vault address={address} vaults={stockVaults} />
+            </div>
         </div>
     )
 }
