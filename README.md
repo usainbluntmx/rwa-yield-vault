@@ -58,6 +58,7 @@ Each asset lives in its own vault, minimizing coupling and reducing attack surfa
 --------------------------------------------------
 
 ⚙️ How It Works
+
 1️⃣ Wallet Connection
 
 - AppKit / WalletConnect integration
@@ -89,6 +90,7 @@ Each asset lives in its own vault, minimizing coupling and reducing attack surfa
 --------------------------------------------------
 
 🛠️ Tech Stack
+
 Smart Contracts
 
 - Solidity ^0.8.20
@@ -112,6 +114,7 @@ Blockchain
 --------------------------------------------------
 
 📦 Supported Assets
+
 Crypto
 
 - MNT (native)
@@ -131,6 +134,7 @@ They do not represent real equities in this MVP.
 --------------------------------------------------
 
 🚀 Getting Started
+
 Requirements
 
 - MetaMask or compatible wallet with EVM ecosystem
@@ -177,23 +181,26 @@ This MVP does not generate real yield yet.
 --------------------------------------------------
 
 🗺️ Roadmap
+
 Short Term
 
-- User transaction history
-- On-chain events → reactive UI
-- Withdraw Max button
-- Active network indicator
+- Real-time UI updates from on-chain events
+- Unified vault engine (Stables & Stocks)
+- Asset metadata layer (icons, names, categories)
+- Improved UX for transactions & errors
+- Vault health & strategy indicators
 
 Mid Term
 
-- Real yield integration (Aave / LST / RWA proxies)
-- Strategy-specific vaults
 - Oracle pricing for tokenized stocks
-- Advanced asset dashboards
+- Real yield integrations (Aave, LSTs, RWA adapters)
+- Strategy-specific vaults
+- Advanced asset dashboards (PnL, yield history)
+- Pff-chain indexing for analytics
 
 Long Term
 
-- Real RWA integrations
+- Real-world asset integrations (bons, equities, T-bills)
 - Compliance-ready flows (KYC / ZK-KYC)
 - Regulated yield distribution
 - Multi-chain deployment
@@ -209,7 +216,7 @@ Mantle offers:
 - Modular infrastructure
 - Excellent UX for real financial applications
 
-Gallito DeFi leverages Mantle as a foundation for next-generation RealFi RWA future.
+Gallito DeFi leverages Mantle as a foundation for next-generation RealFi / RWA future.
 
 --------------------------------------------------
 
