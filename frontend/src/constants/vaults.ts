@@ -1,6 +1,9 @@
 import type { VaultConfig } from "../pages/Vault"
 
-export const VAULTS: VaultConfig[] = [
+/* ----------------------------
+   STABLES + NATIVE
+---------------------------- */
+export const STABLE_VAULTS: VaultConfig[] = [
     {
         symbol: "MNT",
         decimals: 18,
@@ -28,6 +31,12 @@ export const VAULTS: VaultConfig[] = [
         tokenAddress: import.meta.env.VITE_DAI_ADDRESS!,
         vaultAddress: import.meta.env.VITE_DAI_VAULT!,
     },
+]
+
+/* ----------------------------
+   STOCKS
+---------------------------- */
+export const STOCK_VAULTS: VaultConfig[] = [
     {
         symbol: "AAPLx",
         decimals: 18,
@@ -51,4 +60,5 @@ export const VAULTS: VaultConfig[] = [
     },
 ]
 
-export const VAULTS_ADDRESS = import.meta.env.VITE_VAULT_MANAGER_ADDRESS!
+export const VAULTS_ADDRESS =
+    import.meta.env.VITE_VAULT_MANAGER_ADDRESS!

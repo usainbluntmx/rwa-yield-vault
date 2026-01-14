@@ -21,16 +21,6 @@ interface VaultProps {
     vaults: VaultConfig[]
 }
 
-/* ----------------------------
-   HELPERS
----------------------------- */
-const asAddress = (addr?: string) => {
-    if (!addr || !ethers.isAddress(addr)) {
-        throw new Error(`Invalid address: ${addr}`)
-    }
-    return addr
-}
-
 export default function Vault({ address, vaults }: VaultProps) {
     const [amounts, setAmounts] = useState<Record<string, string>>({})
     const [balances, setBalances] = useState<Record<string, string>>({})

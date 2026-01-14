@@ -4,7 +4,12 @@ import Vault from "./pages/Vault"
 import Profile from "./pages/Profile"
 import Faucet from "./pages/Faucet"
 import Landing from "./pages/Landing"
-import { VAULTS } from "./constants/vaults"
+
+// ⬇️ stables solamente (como planeamos)
+import { STABLE_VAULTS } from "./constants/vaults"
+
+// ⬇️ NUEVO: Stocks Vault
+import StocksVault from "./pages/StocksVault"
 
 import {
   createAppKit,
@@ -37,7 +42,10 @@ createAppKit({
   ],
 })
 
-export type View = "vault" | "profile" | "faucet"
+/* ----------------------------
+   VIEWS
+---------------------------- */
+export type View = "vault" | "stocks" | "profile" | "faucet"
 
 function App() {
   const { open } = useAppKit()
@@ -45,7 +53,7 @@ function App() {
 
   const [view, setView] = useState<View>("vault")
 
-  // 🔁 Al conectar wallet → Vault
+  // 🔁 Al conectar wallet → Vault (stables)
   useEffect(() => {
     if (isConnected) {
       setView("vault")
@@ -54,7 +62,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark text-slate-900 dark:text-white">
-      {/* NAVBAR SIEMPRE VISIBLE */}
+      {/* NAVBAR */}
       <Navbar
         view={view}
         isConnected={isConnected}
@@ -86,7 +94,14 @@ function App() {
       {/* APP */}
       {isConnected && (
         <main className="max-w-[1200px] mx-auto px-6 pt-32 pb-20">
-          {view === "vault" && <Vault address={address} vaults={VAULTS} />}
+          {/* STABLE VAULTS */}
+          {view === "vault" && (
+            <Vault address={address} vaults={STABLE_VAULTS} />
+          )}
+
+          {/* STOCK VAULTS */}
+          {view === "stocks" && <StocksVault address={address} />}
+
           {view === "profile" && <Profile />}
           {view === "faucet" && <Faucet />}
         </main>

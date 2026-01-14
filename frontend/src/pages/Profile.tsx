@@ -236,7 +236,7 @@ export default function Profile() {
         loadHistory()
     }, [isConnected, address])
 
-    if (!isConnected) {
+    if (!isConnected || !address) {
         return (
             <p className="text-center mt-20 text-slate-400">
                 Connect your wallet to view your profile.

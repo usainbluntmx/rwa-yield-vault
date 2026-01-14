@@ -5,6 +5,7 @@ import { faucetAbi } from "../abi/faucetAbi"
 import { mockErc20Abi } from "../abi/mockErc20Abi"
 import { useEffect, useState } from "react"
 import type { Eip1193Provider } from "ethers"
+import { ASSET_LOGOS } from "../utils/assets"
 
 export default function FaucetPage() {
     const { address, isConnected } = useAppKitAccount()
@@ -130,10 +131,18 @@ export default function FaucetPage() {
                                 className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-xl p-8 flex flex-col items-center hover:scale-[1.02] transition-transform"
                             >
                                 {/* ICON */}
-                                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 border border-white/10 mb-6 shadow-xl">
-                                    <span className="text-xl font-black text-primary">
-                                        {token.icon ?? token.symbol[0]}
-                                    </span>
+                                <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/5 border border-white/10 mb-6 shadow-xl overflow-hidden">
+                                    {ASSET_LOGOS[token.symbol] ? (
+                                        <img
+                                            src={ASSET_LOGOS[token.symbol]}
+                                            alt={token.symbol}
+                                            className="w-10 h-10 object-contain"
+                                        />
+                                    ) : (
+                                        <span className="text-xl font-black text-primary">
+                                            {token.symbol[0]}
+                                        </span>
+                                    )}
                                 </div>
 
                                 <h2 className="text-2xl font-bold mb-1">

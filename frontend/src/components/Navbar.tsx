@@ -1,7 +1,7 @@
 import React from "react"
 import { useAppKit } from "@reown/appkit/react"
 
-export type View = "vault" | "profile" | "faucet"
+export type View = "vault" | "stocks" | "profile" | "faucet"
 
 interface NavbarProps {
     view: View
@@ -10,7 +10,7 @@ interface NavbarProps {
     onNavigate: (view: View) => void
 }
 
-const NAV_ITEMS: View[] = ["vault", "faucet", "profile"]
+const NAV_ITEMS: View[] = ["vault", "stocks", "faucet", "profile"]
 
 const Navbar: React.FC<NavbarProps> = ({
     view,
@@ -35,7 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
                 {/* NAVIGATION */}
                 <nav className="hidden md:flex items-center gap-10">
-                    {NAV_ITEMS.map(item => (
+                    {NAV_ITEMS.map((item) => (
                         <button
                             key={item}
                             onClick={() => onNavigate(item)}
