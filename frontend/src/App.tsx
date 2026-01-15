@@ -5,10 +5,7 @@ import Profile from "./pages/Profile"
 import Faucet from "./pages/Faucet"
 import Landing from "./pages/Landing"
 
-// ⬇️ stables solamente (como planeamos)
 import { STABLE_VAULTS } from "./constants/vaults"
-
-// ⬇️ NUEVO: Stocks Vault
 import StocksVault from "./pages/StocksVault"
 
 import {
@@ -50,10 +47,9 @@ export type View = "vault" | "stocks" | "profile" | "faucet"
 function App() {
   const { open } = useAppKit()
   const { address, isConnected } = useAppKitAccount()
-
   const [view, setView] = useState<View>("vault")
 
-  // 🔁 Al conectar wallet → Vault (stables)
+  // 🔁 Al conectar wallet → Vault
   useEffect(() => {
     if (isConnected) {
       setView("vault")
@@ -76,14 +72,16 @@ function App() {
         }}
       />
 
-      {/* LANDING */}
+      {/* LANDING (NOT CONNECTED) */}
       {!isConnected && (
         <>
           <Landing />
-          <div className="fixed bottom-16 w-full flex justify-center">
+
+          {/* CONNECT CTA */}
+          <div className="fixed inset-x-0 bottom-6 flex justify-center px-4 z-40">
             <button
               onClick={() => open()}
-              className="flex items-center gap-3 px-10 py-5 bg-primary text-white rounded-full text-lg font-semibold shadow-xl shadow-primary/30 hover:opacity-90 active:scale-95 transition-all"
+              className="w-full max-w-sm flex items-center justify-center gap-3 px-8 py-4 bg-primary text-white rounded-full text-base font-semibold shadow-xl shadow-primary/30 hover:opacity-90 active:scale-95 transition-all"
             >
               Connect Wallet
             </button>
@@ -91,9 +89,9 @@ function App() {
         </>
       )}
 
-      {/* APP */}
+      {/* APP (CONNECTED) */}
       {isConnected && (
-        <main className="max-w-[1200px] mx-auto px-6 pt-32 pb-20">
+        <main className="max-w-[1200px] mx-auto px-4 sm:px-6 pt-24 sm:pt-32 pb-24">
           {/* STABLE VAULTS */}
           {view === "vault" && (
             <Vault address={address} vaults={STABLE_VAULTS} />
@@ -102,7 +100,10 @@ function App() {
           {/* STOCK VAULTS */}
           {view === "stocks" && <StocksVault address={address} />}
 
+          {/* PROFILE */}
           {view === "profile" && <Profile />}
+
+          {/* FAUCET */}
           {view === "faucet" && <Faucet />}
         </main>
       )}

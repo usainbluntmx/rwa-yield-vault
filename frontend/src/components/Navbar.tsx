@@ -46,8 +46,8 @@ const Navbar: React.FC<NavbarProps> = ({
                             key={item}
                             onClick={() => onNavigate(item)}
                             className={`text-sm font-medium transition-colors ${view === item
-                                    ? "text-primary"
-                                    : "hover:text-primary"
+                                ? "text-primary"
+                                : "hover:text-primary"
                                 }`}
                         >
                             {item.charAt(0).toUpperCase() + item.slice(1)}
@@ -75,7 +75,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                 {address.slice(0, 6)}...{address.slice(-4)}
                             </span>
                             <span className="text-primary font-semibold">
-                                Account
+                                Disconnect
                             </span>
                         </button>
                     )}
@@ -99,8 +99,8 @@ const Navbar: React.FC<NavbarProps> = ({
                                 key={item}
                                 onClick={() => handleNavigate(item)}
                                 className={`text-left px-4 py-3 rounded-lg text-sm font-semibold transition-colors ${view === item
-                                        ? "bg-primary/10 text-primary"
-                                        : "hover:bg-white/5"
+                                    ? "bg-primary/10 text-primary"
+                                    : "hover:bg-white/5"
                                     }`}
                             >
                                 {item.charAt(0).toUpperCase() + item.slice(1)}
